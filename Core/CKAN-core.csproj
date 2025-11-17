@@ -76,6 +76,7 @@
     <None Include="..\README.md" Pack="true" PackagePath="\"/>
     <EmbeddedResource Include="builds-ksp.json" />
     <EmbeddedResource Include="builds-ksp2.json" />
+    <EmbeddedResource Include="builds-ksa.json" />
     <EmbeddedResource Include="..\CKAN.schema">
       <LogicalName>CKAN.Core.CKAN.schema</LogicalName>
     </EmbeddedResource>
