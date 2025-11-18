@@ -10,6 +10,7 @@ namespace CKAN.Games
         {
             new KerbalSpaceProgram.KerbalSpaceProgram(),
             new KerbalSpaceProgram2.KerbalSpaceProgram2(),
+            new KittenSpaceAgency.KittenSpaceAgency()
         };
 
         /// <summary>

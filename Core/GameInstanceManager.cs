@@ -749,7 +749,8 @@ namespace CKAN
         /// <returns>An instance of the matching game or null if the user cancelled</returns>
         /// <exception cref="NotGameDirKraken">Thrown when no games found</exception>
         public IGame? DetermineGame(DirectoryInfo path, IUser user)
-            => KnownGames.knownGames.Where(g => g.GameInFolder(path))
+            => 
+                KnownGames.knownGames.Where(g => g.GameInFolder(path))
                                     .ToArray()
                switch
                {

@@ -54,5 +54,12 @@ namespace CKAN.Games
         Uri RepositoryListURL     { get; }
         Uri MetadataBugtrackerURL { get; }
         Uri ModSupportURL         { get; }
+        
+        //Do we need to process mod in an additional way
+        /**
+         * Called before game is started through F9 or Start button
+         * Use this to post process the new modlist (like updating a mod list file)
+         */
+        void ProcessLoadedModsBeforeGameStart(IReadOnlyCollection<InstalledModule> installedModules);
     }
 }

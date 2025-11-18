@@ -366,6 +366,8 @@ namespace CKAN.Games.KerbalSpaceProgram
             }
             return args;
         }
+        
+        public void ProcessLoadedModsBeforeGameStart(IReadOnlyCollection<InstalledModule> installedModules) {} //This is not needed for KSP
 
         private static readonly ILog log = LogManager.GetLogger(typeof(KerbalSpaceProgram));
     }

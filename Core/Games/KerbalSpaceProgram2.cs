@@ -257,6 +257,8 @@ namespace CKAN.Games.KerbalSpaceProgram2
             { "BepInEx",         "BepInEx"         },
             { "BepInEx/plugins", "BepInEx/plugins" },
         };
+        
+        public void ProcessLoadedModsBeforeGameStart(IReadOnlyCollection<InstalledModule> installedModules) {} //This is not needed for KSP2
 
         private static readonly ILog log = LogManager.GetLogger(typeof(KerbalSpaceProgram2));
     }

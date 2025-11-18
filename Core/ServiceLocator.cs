@@ -2,6 +2,7 @@ using Autofac;
 
 using CKAN.Games.KerbalSpaceProgram.GameVersionProviders;
 using CKAN.Configuration;
+using CKAN.Games.KittenSpaceAgency;
 
 namespace CKAN
 {

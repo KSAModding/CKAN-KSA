@@ -659,6 +659,7 @@ namespace CKAN.GUI
                 && (menuItem.Tag as string
                     ?? guiConfig?.CommandLines.First()) is string cmd)
             {
+                currentInstance?.Game.ProcessLoadedModsBeforeGameStart(RegistryManager.Instance(currentInstance!, repoData).registry.InstalledModules);
                 if (!SteamLibrary.IsSteamCmdLine(cmd))
                 {
                     SetPlayButtonActiveInactive(true);
