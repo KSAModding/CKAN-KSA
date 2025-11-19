@@ -156,7 +156,8 @@ namespace CKAN.Games.KittenSpaceAgency
         public GameVersion[] DefaultCompatibleVersions(GameVersion installedVersion)
             => new GameVersion[]
             {
-                GameVersion.Parse("any")
+                new GameVersion(installedVersion.Major,
+                    installedVersion.Minor)
             };
         
         // Key: Allowed value of install_to
