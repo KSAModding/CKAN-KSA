@@ -45,7 +45,7 @@ namespace Tests.NetKAN.Transformers
         {
             // Arrange
             var http = new Mock<IHttpService>();
-            http.Setup(h => h.ResolveRedirect(It.IsAny<Uri>(), It.IsAny<string?>()))
+            http.Setup(h => h.ResolveRedirect(It.IsAny<Uri>()))
                 .Returns(new Uri("https://fake-web-site.com/redirected"));
             var sut      = new HttpTransformer(http.Object);
             var opts     = new TransformOptions(1, null, null, null, false, null);

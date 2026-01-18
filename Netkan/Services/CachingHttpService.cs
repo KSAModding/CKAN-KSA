@@ -149,8 +149,11 @@ namespace CKAN.NetKAN.Services
             _requestedURLs.Clear();
         }
 
-        public Uri? ResolveRedirect(Uri url, string? userAgent)
-            => Net.ResolveRedirect(url, userAgent);
+        public Uri? ResolveRedirect(Uri url)
+            => Net.ResolveRedirect(url, _userAgent);
+
+        public bool HasRedirect(Uri url)
+            => ResolveRedirect(url) != url;
 
         private readonly NetFileCache                    _cache;
         private readonly string?                         _userAgent;

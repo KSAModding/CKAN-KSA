@@ -140,20 +140,11 @@
   <data name="CloneFakeKspDialogCloningInstance" xml:space="preserve">
     <value>"인스턴스 복제 중..."</value>
   </data>
-  <data name="CloneFakeKspDialogInstanceNotValid" xml:space="preserve">
-    <value>복사할 인스턴스가 유효하지 않아요. {0}</value>
-  </data>
-  <data name="CloneFakeKspDialogDestinationNotEmpty" xml:space="preserve">
-    <value>설정한 폴더가 비어있지 않아요. {0}</value>
-  </data>
   <data name="CloneFakeKspDialogCloneFailed" xml:space="preserve">
     <value>복사 실패. {0}</value>
   </data>
   <data name="CloneFakeKspDialogSuccessfulClone" xml:space="preserve">
     <value>성공적으로 인스턴스를 복사했어요.</value>
-  </data>
-  <data name="CloneFakeKspDialogNameAlreadyUsed" xml:space="preserve">
-    <value>그 이름은 이미 사용 중이에요.</value>
   </data>
   <data name="CompatibleGameVersionsDialogNone" xml:space="preserve">
     <value>&lt;NONE&gt;</value>
@@ -808,5 +799,8 @@ CKAN에게 이것을 허용할 건가요? 아니요를 누르면 이 메세지�
   </data>
   <data name="InstallFiltersAddPreset" xml:space="preserve">
     <value>{0} 추가</value>
+  </data>
+  <data name="InstallAllCheckboxConfirmationNo" xml:space="preserve">
+    <value>취소하기</value>
   </data>
 </root>

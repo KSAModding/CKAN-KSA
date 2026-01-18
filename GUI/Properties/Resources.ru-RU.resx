@@ -140,20 +140,11 @@
   <data name="CloneFakeKspDialogCloningInstance" xml:space="preserve">
     <value>«Клонирование...»</value>
   </data>
-  <data name="CloneFakeKspDialogInstanceNotValid" xml:space="preserve">
-    <value>Сборка, которую вы пытаетесь клонировать, не является пригодной сборкой игры: {0}</value>
-  </data>
-  <data name="CloneFakeKspDialogDestinationNotEmpty" xml:space="preserve">
-    <value>Конечная папка не пуста: {0}</value>
-  </data>
   <data name="CloneFakeKspDialogCloneFailed" xml:space="preserve">
     <value>Клонирование не удалось: {0}</value>
   </data>
   <data name="CloneFakeKspDialogSuccessfulClone" xml:space="preserve">
     <value>Клонирование успешно завершено.</value>
-  </data>
-  <data name="CloneFakeKspDialogNameAlreadyUsed" xml:space="preserve">
-    <value>Это название уже используется.</value>
   </data>
   <data name="CompatibleGameVersionsDialogNone" xml:space="preserve">
     <value>&lt;НЕТ&gt;</value>
@@ -854,5 +845,8 @@ Ctrl-клик или Shift-клик для совмещения с текущи�
   </data>
   <data name="InstallFiltersAddPreset" xml:space="preserve">
     <value>Добавить {0}</value>
+  </data>
+  <data name="InstallAllCheckboxConfirmationNo" xml:space="preserve">
+    <value>Отмена</value>
   </data>
 </root>

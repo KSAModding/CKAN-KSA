@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 
-using ChinhDo.Transactions.FileManager;
+using ChinhDo.Transactions;
 using log4net;
 using Newtonsoft.Json;
 
@@ -73,7 +73,7 @@ namespace CKAN
             log.InfoFormat("Initialising {0}", CkanDir);
 
             // TxFileManager knows if we are in a transaction
-            TxFileManager txFileMgr = new TxFileManager();
+            var txFileMgr = new TxFileManager(CkanDir);
 
             if (!Directory.Exists(CkanDir))
             {
@@ -331,6 +331,24 @@ namespace CKAN
                || (Directory.Exists(absPath)
                    && Directory.EnumerateFileSystemEntries(absPath, "*", SearchOption.AllDirectories)
                                .Any(f => registry.FileOwner(ToRelativeGameDir(f)) != null));
+
+        /// <summary>
+        /// Returns the number of bytes on disk consumed by this game instance
+        /// </summary>
+        public long TotalSize => Directory.EnumerateFiles(GameDir, "*", SearchOption.AllDirectories)
+                                          .Sum(path => new FileInfo(path).Length);
+
+        /// <summary>
+        /// Returns the number of bytes needed to clone this game instance if hard links are allowed
+        /// </summary>
+        public long NonHardLinkableSize(string[] leaveEmpty)
+            => Utilities.DirectoryNonHardLinkableSize(
+                   new DirectoryInfo(GameDir),
+                   new string[] { "CKAN/registry.locked", "CKAN/playtime.json" },
+                   Platform.IsWindows ? Game.StockFolders
+                                      : Array.Empty<string>(),
+                   leaveEmpty,
+                   new string[] { "CKAN" });
 
         [ExcludeFromCodeCoverage]
         public void PlayGame(string command, Action? onExit = null)

@@ -16,6 +16,7 @@ namespace CKAN.NetKAN.Validators
                 case null:
                 case "github":
                 case "gitlab":
+                case "gitea":
                 case "http":
                 case "ksp-avc":
                 case "jenkins":

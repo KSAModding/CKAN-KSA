@@ -50,7 +50,7 @@ namespace CKAN.NetKAN.Transformers
                     foreach (var vers in versions)
                     {
                         returnedAny = true;
-                        yield return TransformOne(metadata, metadata.Json(), sdMod, vers);
+                        yield return TransformOne(metadata.Json(), sdMod, vers);
                     }
                     if (!returnedAny)
                     {
@@ -65,8 +65,7 @@ namespace CKAN.NetKAN.Transformers
             }
         }
 
-        private Metadata TransformOne(Metadata metadata, JObject json,
-                                      SpacedockMod sdMod, SpacedockVersion latestVersion)
+        private Metadata TransformOne(JObject json, SpacedockMod sdMod, SpacedockVersion latestVersion)
         {
             Log.InfoFormat("Found SpaceDock mod: {0} {1}", sdMod.name, latestVersion.friendly_version);
 
@@ -106,22 +105,9 @@ namespace CKAN.NetKAN.Transformers
                              var sdLicense                  => sdLicense?.Trim().Replace(' ', '-'),
                          });
 
-            // Make sure resources exist.
-            if (json["resources"] == null)
-            {
-                json["resources"] = new JObject();
-            }
+            json.SafeMerge("resources", sdMod.Resources);
 
-            var resourcesJson = (JObject?)json["resources"];
-            resourcesJson?.SafeAdd("spacedock", sdMod.GetPageUrl().OriginalString);
-            TryAddResourceURL(metadata.Identifier, resourcesJson, "homepage",   sdMod.website);
-
-            if (sdMod.background != null)
-            {
-                TryAddResourceURL(metadata.Identifier, resourcesJson, "x_screenshot", sdMod.background.ToString());
-            }
-
-            if (resourcesJson != null && !string.IsNullOrEmpty(sdMod.source_code))
+            if (!string.IsNullOrEmpty(sdMod.source_code))
             {
                 try
                 {
@@ -133,7 +119,9 @@ namespace CKAN.NetKAN.Transformers
                                                             match.Groups["repo"].Value))
                            is GithubRepo repoInfo)
                     {
-                        GithubTransformer.SetRepoResources(repoInfo, resourcesJson);
+                        // resources.repository should be set by GH when possible
+                        (json["resources"] as JObject)?.Remove("repository");
+                        json.SafeMerge("resources", repoInfo.Resources);
                         if (repoInfo.Archived)
                         {
                             Log.Warn("Repo is archived, consider freezing");
@@ -150,27 +138,10 @@ namespace CKAN.NetKAN.Transformers
                     // Just give up, invalid URLs are fine
                 }
             }
-            TryAddResourceURL(metadata.Identifier, resourcesJson, "repository", sdMod.source_code);
 
             Log.DebugFormat("Transformed metadata:{0}{1}", Environment.NewLine, json);
 
             return new Metadata(json);
-        }
-
-        private static void TryAddResourceURL(string identifier, JObject? resources, string key, string? rawURL)
-        {
-            if (rawURL != null && !string.IsNullOrEmpty(rawURL))
-            {
-                var normalized = Net.NormalizeUri(rawURL);
-                if (!string.IsNullOrEmpty(normalized))
-                {
-                    resources?.SafeAdd(key, normalized);
-                }
-                else
-                {
-                    Log.WarnFormat("Could not normalize URL from {0}: {1}", identifier, rawURL);
-                }
-            }
         }
 
         private static JToken? GetAuthors(SpacedockMod mod)

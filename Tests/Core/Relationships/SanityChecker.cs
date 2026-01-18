@@ -381,7 +381,7 @@ namespace Tests.Core.Relationships
             var dll_count = dlls.Count;
             var mods_count = mods.Count;
 
-            var results = CKAN.Registry.FindReverseDependencies(to_remove, null, mods, dlls, dlc);
+            var results = CKAN.Registry.FindReverseDependencies(to_remove, Array.Empty<CkanModule>(), mods, dlls, dlc);
 
             // Make sure nothing changed.
             Assert.AreEqual(remove_count, to_remove.Count, message + " remove count");

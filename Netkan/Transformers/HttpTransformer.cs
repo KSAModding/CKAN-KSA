@@ -13,9 +13,8 @@ namespace CKAN.NetKAN.Transformers
     /// </summary>
     internal sealed class HttpTransformer : ITransformer
     {
-        public HttpTransformer(IHttpService httpSvc, string? userAgent = null)
+        public HttpTransformer(IHttpService httpSvc)
         {
-            this.userAgent = userAgent;
             http           = httpSvc;
         }
 
@@ -30,7 +29,7 @@ namespace CKAN.NetKAN.Transformers
 
                 if (Uri.IsWellFormedUriString(metadata.Kref.Id, UriKind.Absolute))
                 {
-                    var resolvedUri = http.ResolveRedirect(new Uri(metadata.Kref.Id), userAgent);
+                    var resolvedUri = http.ResolveRedirect(new Uri(metadata.Kref.Id));
 
                     Log.InfoFormat("URL {0} resolved to {1}", metadata.Kref.Id, resolvedUri);
 
@@ -58,7 +57,6 @@ namespace CKAN.NetKAN.Transformers
             yield return metadata;
         }
 
-        private readonly string?      userAgent;
         private readonly IHttpService http;
 
         private static readonly ILog Log = LogManager.GetLogger(typeof(HttpTransformer));

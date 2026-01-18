@@ -42,14 +42,11 @@ namespace CKAN.NetKAN.Transformers
                 Log.InfoFormat("Executing MetaNetkan transformation with {0}", metadata.Kref);
                 Log.DebugFormat("Input metadata:{0}{1}", Environment.NewLine, metadata.AllJson);
 
-                // Make sure resources exist, save metanetkan
-                if (json["resources"] == null)
-                {
-                    json["resources"] = new JObject();
-                }
-
-                var resourcesJson = json["resources"] as JObject;
-                resourcesJson?.SafeAdd("metanetkan", metadata.Kref.Id);
+                json.SafeMerge("resources",
+                               new JObject()
+                               {
+                                   { "metanetkan", metadata.Kref.Id },
+                               });
 
                 var uri = new Uri(metadata.Kref.Id);
                 if ((_github?.DownloadText(uri)

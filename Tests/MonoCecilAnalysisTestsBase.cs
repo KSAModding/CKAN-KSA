@@ -4,6 +4,7 @@ using System.Collections.Generic;
 
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+
 using CKAN.Extensions;
 
 namespace Tests
@@ -74,9 +75,11 @@ namespace Tests
                          .Concat(td.NestedTypes.SelectMany(GetAllNestedTypes));
 
         protected static IEnumerable<MethodCall> FindStartedTasks(MethodDefinition md)
-            => StartNewCalls(md).Select(FindStartNewArgument)
-                                .OfType<MethodDefinition>()
-                                .Select(taskArg => new MethodCall() { md, taskArg });
+            => StartNewCalls(md).SelectMany(sn =>
+                   sn.Operand is MethodReference snMethod
+                   && FindStartNewArgument(sn) is MethodDefinition taskArg
+                       ? Enumerable.Repeat(new MethodCall() { md, snMethod.Resolve(), taskArg, }, 1)
+                       : Enumerable.Empty<MethodCall>());
 
         private static IEnumerable<Instruction> StartNewCalls(MethodDefinition md)
             => md.Body?.Instructions.Where(instr => callOpCodes.Contains(instr.OpCode.Name)
@@ -85,16 +88,48 @@ namespace Tests
                       ?? Enumerable.Empty<Instruction>();
 
         private static bool isStartNew(MethodReference mr)
-            => (mr.DeclaringType.Namespace == "System.Threading.Tasks"
-                && mr.DeclaringType.Name   == "TaskFactory"
-                && mr.Name                 == "StartNew")
-               || (mr.DeclaringType.Namespace == "System.Threading.Tasks"
-                   && mr.DeclaringType.Name   == "Task"
-                   && mr.Name                 == "Run");
+            => mr is
+               {
+                   DeclaringType: { Namespace: "System.Threading.Tasks", Name: "TaskFactory" },
+                   Name:          "StartNew",
+               }
+               or
+               {
+                   DeclaringType: { Namespace: "System.Threading.Tasks", Name: "Task" },
+                   Name:          "Run",
+               };
 
         private static MethodDefinition? FindStartNewArgument(Instruction instr)
-            => instr.OpCode.Name == "ldftn" ? instr.Operand as MethodDefinition
-                                            : FindStartNewArgument(instr.Previous);
+            => FindFuncArguments(instr).FirstOrDefault();
+
+        protected static IEnumerable<MethodCall> FindDebouncedTasks(MethodDefinition md)
+            => DebounceCalls(md).SelectMany(db =>
+                   db.Operand is MethodReference dbMethod
+                       ? FindDebounceArguments(db)
+                             .Select(dbArg => new MethodCall() { md, dbMethod.Resolve(), dbArg, })
+                       : Enumerable.Empty<MethodCall>());
+
+        private static IEnumerable<Instruction> DebounceCalls(MethodDefinition md)
+            => md.Body?.Instructions.Where(instr => callOpCodes.Contains(instr.OpCode.Name)
+                                                    && instr.Operand is MethodReference mr
+                                                    && isDebounce(mr))
+                      ?? Enumerable.Empty<Instruction>();
+
+        private static bool isDebounce(MethodReference mr)
+            => mr is
+               {
+                   DeclaringType: { Namespace: "CKAN.GUI", Name: "Util" },
+                   Name:          "Debounce",
+               };
+
+        private static IEnumerable<MethodDefinition> FindDebounceArguments(Instruction instr)
+            => FindFuncArguments(instr).Take(4);
+
+        private static IEnumerable<MethodDefinition> FindFuncArguments(Instruction instr)
+            => instr.TraverseNodes(i => i.Previous)
+                    .Where(i => i.OpCode.Name == "ldftn")
+                    .Select(i => i.Operand)
+                    .OfType<MethodDefinition>();
 
         private static readonly HashSet<string> callOpCodes = new HashSet<string>
         {

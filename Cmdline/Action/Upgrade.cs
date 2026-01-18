@@ -187,10 +187,10 @@ namespace CKAN.CmdLine
         {
             UpgradeModules(
                 cache, userAgent, user, instance, repoData,
-                (ModuleInstaller installer, NetAsyncModulesDownloader downloader, RegistryManager regMgr, ref HashSet<string>? possibleConfigOnlyDirs) =>
+                (ModuleInstaller installer, NetAsyncModulesDownloader downloader, RegistryManager regMgr, ref HashSet<string>? possibleConfigOnlyDirs, ISet<CkanModule> autoInstalled) =>
                     installer.Upgrade(modules, downloader,
                                       ref possibleConfigOnlyDirs,
-                                      regMgr, deduper, true, true),
+                                      regMgr, deduper, autoInstalled, true, true),
                 modules.Add);
         }
 
@@ -210,7 +210,7 @@ namespace CKAN.CmdLine
         {
             UpgradeModules(
                 cache, userAgent, user, instance, repoData,
-                (ModuleInstaller installer, NetAsyncModulesDownloader downloader, RegistryManager regMgr, ref HashSet<string>? possibleConfigOnlyDirs) =>
+                (ModuleInstaller installer, NetAsyncModulesDownloader downloader, RegistryManager regMgr, ref HashSet<string>? possibleConfigOnlyDirs, ISet<CkanModule> autoInstalled) =>
                 {
                     var crit     = instance.VersionCriteria();
                     var registry = regMgr.registry;
@@ -251,7 +251,7 @@ namespace CKAN.CmdLine
                     if (to_upgrade.Count > 0)
                     {
                         installer.Upgrade(to_upgrade, downloader,
-                                          ref possibleConfigOnlyDirs, regMgr, deduper, true);
+                                          ref possibleConfigOnlyDirs, regMgr, deduper, autoInstalled, true);
                     }
                 },
                 m => identsAndVersions.Add(m.identifier));
@@ -265,7 +265,7 @@ namespace CKAN.CmdLine
                                              : orig;
 
         // Action<ref T> isn't allowed
-        private delegate void AttemptUpgradeAction(ModuleInstaller installer, NetAsyncModulesDownloader downloader, RegistryManager regMgr, ref HashSet<string>? possibleConfigOnlyDirs);
+        private delegate void AttemptUpgradeAction(ModuleInstaller installer, NetAsyncModulesDownloader downloader, RegistryManager regMgr, ref HashSet<string>? possibleConfigOnlyDirs, ISet<CkanModule> autoInstalled);
 
         /// <summary>
         /// The core of the module upgrading logic, with callbacks to
@@ -292,12 +292,13 @@ namespace CKAN.CmdLine
                 var downloader = new NetAsyncModulesDownloader(user, cache, userAgent);
                 var regMgr     = RegistryManager.Instance(instance, repoData);
                 HashSet<string>? possibleConfigOnlyDirs = null;
+                var autoInstalled = new HashSet<CkanModule>();
                 bool done = false;
                 while (!done)
                 {
                     try
                     {
-                        attemptUpgradeCallback?.Invoke(installer, downloader, regMgr, ref possibleConfigOnlyDirs);
+                        attemptUpgradeCallback?.Invoke(installer, downloader, regMgr, ref possibleConfigOnlyDirs, autoInstalled);
                         transact.Complete();
                         done = true;
                     }

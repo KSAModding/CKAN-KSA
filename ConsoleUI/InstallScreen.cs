@@ -55,6 +55,7 @@ namespace CKAN.ConsoleUI {
             if (manager.CurrentInstance != null && manager.Cache != null)
             {
                 using (TransactionScope trans = CkanTransaction.CreateTransactionScope()) {
+                    var autoInstalled = new HashSet<CkanModule>();
                     bool retry = false;
                     do {
                         Draw();
@@ -109,7 +110,7 @@ namespace CKAN.ConsoleUI {
                                                              ?? m)
                                                 .ToArray();
                                 inst.InstallList(iList, resolvOpts(stabilityTolerance), regMgr,
-                                                 ref possibleConfigOnlyDirs, deduper, userAgent, dl);
+                                                 ref possibleConfigOnlyDirs, deduper, userAgent, dl, autoInstalled);
                                 plan.Install.Clear();
                             }
                             if (plan.Upgrade.Count > 0) {
@@ -120,7 +121,7 @@ namespace CKAN.ConsoleUI {
                                                                           .Keys
                                                                           .Except(plan.Upgrade)
                                                                           .ToHashSet());
-                                inst.Upgrade(upgGroups[true], dl, ref possibleConfigOnlyDirs, regMgr, deduper);
+                                inst.Upgrade(upgGroups[true], dl, ref possibleConfigOnlyDirs, regMgr, deduper, autoInstalled);
                                 plan.Upgrade.Clear();
                             }
                             if (plan.Replace.Count > 0) {
@@ -148,6 +149,7 @@ namespace CKAN.ConsoleUI {
                             if (chosen != null) {
                                 // Use chosen to continue installing
                                 plan.Install.Add(chosen);
+                                autoInstalled.Add(chosen);
                                 retry = true;
                             }
 

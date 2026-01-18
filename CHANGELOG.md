@@ -2,11 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
-## v1.36.1
+## v1.36.3
 
 ### Features
 
-- [Multiple] Mod file deduplication across game instances (#4358, #4440, #4453 by: HebaruSan)
+- [Multiple] Translation updates (#4483 by: gongasss, vinix38; reviewed: HebaruSan)
+- [Multiple] Mark virtual dependencies as auto-installed (#4499 by: HebaruSan)
+
+### Bugfixes
+
+- [Core] Ensure encoding is UTF-8 when saving JSON (#4475, #4478 by: HebaruSan)
+- [GUI] Display release date in local time zone (#4488 by: HebaruSan)
+- [GUI] Fix freezing after startup with empty mod list (#4491, #4492 by: HebaruSan)
+- [GUI] Remove dependencies from changeset when skipping a change (#4495 by: HebaruSan)
+- [Multiple] Allow newly installed versions to satisfy deps (#4496 by: HebaruSan)
+
+### Internal
+
+- [Docs] Update download count image for Minkowski² (#4474 by: Clayell; reviewed: HebaruSan)
+- [Netkan] Fix `x_netkan_epoch` not applied before unreliable server check (#4477 by: HebaruSan)
+- [Netkan] Gitea kref (#4494, #4498 by: HebaruSan)
+
+## v1.36.2 (Politas)
+
+### Features
+
+- [Multiple] Mod file deduplication across game instances (#4358, #4440, #4453, #4468 by: HebaruSan)
 - [Multiple] Translation updates from Crowdin (#4359, #4422, #4443 by: HebaruSan)
 - [Multiple] Make global install filters and presets game-specific (#4361 by: HebaruSan)
 - [GUI] Add download count to Metadata Tab (#4363, #4368 by: averageksp; reviewed: HebaruSan)
@@ -14,6 +35,7 @@ All notable changes to this project will be documented in this file.
 - [GUI] Show recommendations of chosen recommendations in GUI, readable foreground colors for labels (#4381, #4382 by: HebaruSan)
 - [Multiple] Mod list multi-select (#4386 by: HebaruSan)
 - [Multiple] Report number of filtered files in install (#4443 by: HebaruSan)
+- [Multiple] Check free space before cloning (#4473 by: HebaruSan)
 
 ### Bugfixes
 
@@ -26,6 +48,9 @@ All notable changes to this project will be documented in this file.
 - [ConsoleUI] Recommendations of full changeset in ConsoleUI (#4416 by: HebaruSan)
 - [GUI] Fix GUI exceptions for module not in available modules list (#4431 by: HebaruSan)
 - [Core] Don't clone with symlinks on Linux (#4441 by: HebaruSan)
+- [Core] Use temp dir in instance for mod file transactions (#4462 by: HebaruSan)
+- [Core] Fix creating directories for Scenarios (#4471 by: HebaruSan)
+- [Multiple] Independent caching for virtual dependency choices (#4472 by: HebaruSan)
 
 ### Internal
 
@@ -41,6 +66,7 @@ All notable changes to this project will be documented in this file.
 - [Netkan] Make CachingHttpService more thread-safe (#4402 by: HebaruSan)
 - [Netkan] Lookback for `version_from_asset` (#4407 by: HebaruSan)
 - [Build] Migrate Mac app bundle from Mono to dotnet (#4410, #4418 by: HebaruSan; reviewed: lewisfm)
+- [Core] Refactor module installer to use relative paths internally (#4469 by: HebaruSan)
 
 ## v1.36.0 (Quasar)
 

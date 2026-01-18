@@ -8,6 +8,7 @@ using CKAN.NetKAN.Services;
 using CKAN.NetKAN.Validators;
 using CKAN.NetKAN.Sources.Github;
 using CKAN.NetKAN.Sources.Gitlab;
+using CKAN.NetKAN.Sources.Gitea;
 using CKAN.NetKAN.Sources.Jenkins;
 using CKAN.NetKAN.Sources.Spacedock;
 using CKAN.NetKAN.Sources.SourceForge;
@@ -24,7 +25,6 @@ namespace CKAN.NetKAN.Transformers
                                  IModuleService moduleService,
                                  string?        githubToken,
                                  string?        gitlabToken,
-                                 string?        userAgent,
                                  bool?          prerelease,
                                  IGame          game,
                                  IValidator     validator)
@@ -32,7 +32,9 @@ namespace CKAN.NetKAN.Transformers
             _validator = validator;
             var ghApi = new GithubApi(http, githubToken);
             var glApi = new GitlabApi(http, gitlabToken);
+            var giteaAPi = new GiteaApi(http);
             var sfApi = new SourceForgeApi(http);
+            var swLoader = new SpaceWarpInfoLoader(http, ghApi);
             _transformers = InjectVersionedOverrideTransformers(new ITransformer[]
             {
                 new StagingTransformer(game),
@@ -40,12 +42,13 @@ namespace CKAN.NetKAN.Transformers
                 new SpacedockTransformer(new SpacedockApi(http), ghApi),
                 new GithubTransformer(ghApi, prerelease),
                 new GitlabTransformer(glApi),
+                new GiteaTransformer(giteaAPi),
                 new SourceForgeTransformer(sfApi),
-                new HttpTransformer(http, userAgent),
+                new HttpTransformer(http),
                 new JenkinsTransformer(new JenkinsApi(http)),
                 new AvcKrefTransformer(http, ghApi),
                 new InternalCkanTransformer(http, moduleService),
-                new SpaceWarpInfoTransformer(http, ghApi, moduleService),
+                new SpaceWarpInfoTransformer(http, swLoader, moduleService),
                 new AvcTransformer(http, moduleService, ghApi),
                 new LocalizationsTransformer(http, moduleService),
                 new VersionEditTransformer(),

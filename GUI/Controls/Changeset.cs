@@ -81,8 +81,8 @@ namespace CKAN.GUI
                 && row.ConfirmUncheck())
             {
                 (ChangesGrid.DataSource as BindingList<ChangesetRow>)?.Remove(row);
-                changeset?.Remove(row.Change);
                 OnRemoveItem?.Invoke(row.Change);
+                changeset?.Remove(row.Change);
             }
         }
 

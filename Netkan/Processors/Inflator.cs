@@ -42,7 +42,7 @@ namespace CKAN.NetKAN.Processors
                           IGame        game,
                           NetFileCache cache)
             : this(githubToken, gitlabToken,
-                   userAgent, prerelease, game,
+                   prerelease, game,
                    cache,
                    new CachingHttpService(cache, overwriteCache, userAgent),
                    new ModuleService(game),
@@ -52,7 +52,6 @@ namespace CKAN.NetKAN.Processors
 
         internal Inflator(string?        githubToken,
                           string?        gitlabToken,
-                          string?        userAgent,
                           bool?          prerelease,
                           IGame          game,
                           NetFileCache   cache,
@@ -65,7 +64,7 @@ namespace CKAN.NetKAN.Processors
             this.http     = http;
             ckanValidator = new CkanValidator(http, moduleService, game, githubToken);
             transformer   = new NetkanTransformer(http, fileService, moduleService,
-                                                  githubToken, gitlabToken, userAgent,
+                                                  githubToken, gitlabToken,
                                                   prerelease, game, netkanValidator);
         }
 

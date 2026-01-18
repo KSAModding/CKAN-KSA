@@ -112,6 +112,7 @@ namespace CKAN.GUI
 
                 // this will be the final list of mods we want to install
                 var toInstall   = new List<CkanModule>();
+                var autoInstalled = new HashSet<CkanModule>();
                 var toUninstall = new HashSet<CkanModule>();
                 var toUpgrade   = new HashSet<CkanModule>();
 
@@ -253,13 +254,13 @@ namespace CKAN.GUI
                             if (!canceled && toInstall.Count > 0)
                             {
                                 installer.InstallList(toInstall, options, registry_manager, ref possibleConfigOnlyDirs,
-                                                      deduper, userAgent, downloader, false);
+                                                      deduper, userAgent, downloader, autoInstalled, false);
                                 toInstall.Clear();
                             }
                             if (!canceled && toUpgrade.Count > 0)
                             {
                                 installer.Upgrade(toUpgrade, downloader, ref possibleConfigOnlyDirs, registry_manager,
-                                                  deduper, true, false);
+                                                  deduper, autoInstalled, true, false);
                                 toUpgrade.Clear();
                             }
                             if (canceled)
@@ -307,7 +308,7 @@ namespace CKAN.GUI
                                 // and any mods depending on them
                                 var dependers = Registry.FindReverseDependencies(
                                         skip.Select(s => s.identifier).ToList(),
-                                        null,
+                                        Array.Empty<CkanModule>(),
                                         registry.InstalledModules.Select(im => im.Module)
                                                                  .Concat(fullChangeset)
                                                                  .ToArray(),
@@ -345,6 +346,7 @@ namespace CKAN.GUI
                             {
                                 // User picked a mod, queue it up for installation
                                 toInstall.Add(chosen);
+                                autoInstalled.Add(chosen);
                                 // DON'T return so we can loop around and try the above InstallList call again
                                 tabController.ShowTab(WaitTabPage.Name);
                                 Util.Invoke(this, () => StatusProgress.Visible = true);

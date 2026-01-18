@@ -76,12 +76,12 @@ namespace CKAN.NetKAN.Transformers
             json.SafeAdd("abstract", project.Description);
             json.SafeAdd("author",   release.Author?.Name);
             json.SafeAdd("version",  release.TagName);
-            json.SafeMerge("resources", JObject.FromObject(new Dictionary<string, string?>()
+            json.SafeMerge("resources", new JObject()
             {
                 { "repository", project.WebURL },
                 { "bugtracker", project.IssuesEnabled ? $"{project.WebURL}/-/issues" : null },
                 { "manual",     project.ReadMeURL },
-            }));
+            });
             json.SafeAdd("download",
                 release.Assets?.Sources
                                .Where(src => src.Format == "zip")

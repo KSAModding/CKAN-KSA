@@ -50,7 +50,7 @@ namespace CKAN.NetKAN.Sources.Github
 
         public GithubRepo? GetRepo(GithubRef reference)
             => Call($"repos/{reference.Repository}") is string s
-                   ? JsonConvert.DeserializeObject<GithubRepo>(s)
+                   ? CheckForWiki(reference, JsonConvert.DeserializeObject<GithubRepo>(s))
                    : null;
 
         public GithubRelease? GetLatestRelease(GithubRef reference, bool? usePrerelease)
@@ -97,6 +97,19 @@ namespace CKAN.NetKAN.Sources.Github
                     ? JsonConvert.DeserializeObject<List<GithubUser>>(s)
                     : null)
                ?? new List<GithubUser>();
+
+        private GithubRepo? CheckForWiki(GithubRef reference, GithubRepo? repo)
+        {
+            if (repo is { HasWiki: true })
+            {
+                repo.HasWiki = ActuallyHasWiki(reference);
+            }
+            return repo;
+        }
+
+        private bool ActuallyHasWiki(GithubRef reference)
+            // If no wiki pages have been created, the /wiki route redirects
+            => !_http.HasRedirect(new Uri($"https://github.com/{reference.Account}/{reference.Project}/wiki"));
 
         /// <summary>
         /// Download a URL via the GitHubAPI.

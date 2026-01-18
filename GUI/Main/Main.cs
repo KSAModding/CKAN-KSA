@@ -823,7 +823,7 @@ namespace CKAN.GUI
             return false;
         }
 
-        private void ManageMods_OnSelectedModuleChanged(GUIMod m)
+        private void ManageMods_OnSelectedModuleChanged(GUIMod? m)
         {
             if (MainTabControl.SelectedTab == ManageModsTabPage)
             {

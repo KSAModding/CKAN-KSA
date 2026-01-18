@@ -45,7 +45,7 @@ namespace CKAN.GUI
                                             Util.Debounce<EventArgs>((sender, e) => {},
                                                                      (sender, e) => false,
                                                                      (sender, e) => false,
-                                                                     ModGrid_SelectionChanged,
+                                                                     (sender, e) => Util.Invoke(this, () => ModGrid_SelectionChanged(sender, e)),
                                                                      100));
 
             repoData = ServiceLocator.Container.Resolve<RepositoryDataManager>();
@@ -138,7 +138,7 @@ namespace CKAN.GUI
 
         private List<bool> descending => guiConfig?.MultiSortDescending ?? new List<bool>();
 
-        public event Action<GUIMod>? OnSelectedModuleChanged;
+        public event Action<GUIMod?>? OnSelectedModuleChanged;
         public event Action<List<ModChange>?, Dictionary<GUIMod, string>?>? OnChangeSetChanged;
         public event Action? OnRegistryChanged;
 
@@ -707,9 +707,9 @@ namespace CKAN.GUI
             }
 
             var module = SelectedModule;
+            OnSelectedModuleChanged?.Invoke(module);
             if (module != null)
             {
-                OnSelectedModuleChanged?.Invoke(module);
                 NavSelectMod(module);
             }
         }
@@ -1122,6 +1122,18 @@ namespace CKAN.GUI
                     guiMod.SelectedMod = guiMod.InstalledMod?.Module;
                     switch (change.ChangeType)
                     {
+                        case GUIModChangeType.Remove:
+                            if (row.Cells[Installed.Index] is DataGridViewCheckBoxCell instCell)
+                            {
+                                instCell.Value = true;
+                            }
+                            break;
+                        case GUIModChangeType.Install:
+                            if (row.Cells[Installed.Index] is DataGridViewCheckBoxCell rmCell)
+                            {
+                                rmCell.Value = false;
+                            }
+                            break;
                         case GUIModChangeType.Replace:
                             if (row.Cells[ReplaceCol.Index] is DataGridViewCheckBoxCell checkCell)
                             {
@@ -1161,27 +1173,45 @@ namespace CKAN.GUI
             });
         }
 
-        private void InstallAllCheckbox_CheckChanged(object? sender, EventArgs? e)
+        private void InstallAllCheckbox_CheckedChanged(object? sender, EventArgs? e)
         {
-            WithFrozenChangeset(() =>
+            if (ChangeSet?.Where(ch => ch.ChangeType == GUIModChangeType.Install)
+                          .Select(ch => ch.Mod)
+                          .ToArray()
+                is { Length: > 0 } installing
+                && Main.Instance?.YesNoDialog(string.Format(Properties.Resources.InstallAllCheckboxConfirmation,
+                                                            string.Join(Environment.NewLine,
+                                                                        installing.Select(i => $"- {i}"))),
+                                              Properties.Resources.InstallAllCheckboxConfirmationYes,
+                                              Properties.Resources.InstallAllCheckboxConfirmationNo)
+                   is false)
             {
-                if (InstallAllCheckbox.Checked)
+                InstallAllCheckbox.CheckedChanged -= InstallAllCheckbox_CheckedChanged;
+                InstallAllCheckbox.Checked = !InstallAllCheckbox.Checked;
+                InstallAllCheckbox.CheckedChanged += InstallAllCheckbox_CheckedChanged;
+            }
+            else
+            {
+                WithFrozenChangeset(() =>
                 {
-                    // Reset changeset
-                    ClearChangeSet();
-                }
-                else if (mainModList != null)
-                {
-                    // Uninstall all and cancel upgrades
-                    foreach (var row in mainModList.full_list_of_mod_rows.Values)
+                    if (InstallAllCheckbox.Checked)
                     {
-                        if (row.Tag is GUIMod gmod)
+                        // Reset changeset
+                        ClearChangeSet();
+                    }
+                    else if (mainModList != null)
+                    {
+                        // Uninstall all and cancel upgrades
+                        foreach (var row in mainModList.full_list_of_mod_rows.Values)
                         {
-                            gmod.SelectedMod = null;
+                            if (row.Tag is GUIMod gmod)
+                            {
+                                gmod.SelectedMod = null;
+                            }
                         }
                     }
-                }
-            });
+                });
+            }
         }
 
         public void ClearChangeSet()

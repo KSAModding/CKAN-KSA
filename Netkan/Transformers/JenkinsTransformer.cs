@@ -87,14 +87,11 @@ namespace CKAN.NetKAN.Transformers
                         json.SafeAdd("version", artifact.FileName);
                     }
 
-                    // Make sure resources exist.
-                    if (json["resources"] == null)
-                    {
-                        json["resources"] = new JObject();
-                    }
-
-                    var resourcesJson = (JObject?)json["resources"];
-                    resourcesJson?.SafeAdd("ci", metadata.Kref?.Id);
+                    json.SafeMerge("resources",
+                                   new JObject()
+                                   {
+                                       { "ci", metadata.Kref?.Id },
+                                   });
 
                     Log.DebugFormat("Transformed metadata:{0}{1}", Environment.NewLine, json);
 

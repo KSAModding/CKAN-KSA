@@ -4,7 +4,7 @@ using System.Linq;
 using System.Collections.Generic;
 
 using Newtonsoft.Json;
-using ChinhDo.Transactions.FileManager;
+using ChinhDo.Transactions;
 using log4net;
 
 using CKAN.IO;
@@ -258,7 +258,7 @@ namespace CKAN
         {
             try
             {
-                etags = JsonConvert.DeserializeObject<Dictionary<Uri, string>>(File.ReadAllText(etagsPath))
+                etags = JsonConvert.DeserializeObject<Dictionary<Uri, string>>(File.ReadAllText(etagsPath, Encoding.UTF8))
                         // An empty or all-null file can deserialize as null
                         ?? new Dictionary<Uri, string>();
             }
@@ -270,8 +270,10 @@ namespace CKAN
 
         private void saveETags()
         {
-            TxFileManager file_transaction = new TxFileManager();
-            file_transaction.WriteAllText(etagsPath, JsonConvert.SerializeObject(etags, Formatting.Indented));
+            var txFileMgr = new TxFileManager();
+            txFileMgr.WriteAllText(etagsPath,
+                                   JsonConvert.SerializeObject(etags, Formatting.Indented),
+                                   Encoding.UTF8);
         }
 
         private void setETag(NetAsyncDownloader.DownloadTarget target,

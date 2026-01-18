@@ -10,6 +10,7 @@ using Mono.Cecil;
 using Mono.Cecil.Cil;
 using NUnit.Framework;
 
+using CKAN.Extensions;
 using CKAN.GUI.Attributes;
 
 namespace Tests.GUI
@@ -35,6 +36,7 @@ namespace Tests.GUI
             var calls = allMethods.Where(hasForbidGUIAttribute)
                                   .Select(meth => new MethodCall() { meth })
                                   .Concat(allMethods.SelectMany(FindStartedTasks))
+                                  .Concat(allMethods.SelectMany(FindDebouncedTasks))
                                   .SelectMany(GetAllCallsWithoutForbidGUI);
 
             // Assert
@@ -47,15 +49,6 @@ namespace Tests.GUI
                 }
             });
         }
-
-        // The sequence to start a task seems to be:
-        // 1. ldftn the function to start
-        // 2. newobj a System.Action to hold it
-        // 3. callvirt StartNew
-        // ... so find the operand of the ldftn most immediately preceding the call
-        private static MethodDefinition? FindStartNewArgument(Instruction instr)
-            => instr.OpCode.Name == "ldftn" ? instr.Operand as MethodDefinition
-                                            : FindStartNewArgument(instr.Previous);
 
         private static IEnumerable<MethodCall> GetAllCallsWithoutForbidGUI(MethodCall initialStack)
             => VisitMethodDefinition(initialStack,
@@ -79,9 +72,14 @@ namespace Tests.GUI
                 && unsafeType(md.DeclaringType);
 
         // Any method on a type in WinForms or inheriting from anything in WinForms is presumed unsafe
-        private static bool unsafeType(TypeDefinition t)
-            => t.Namespace == winformsNamespace
-                || (t.BaseType != null && unsafeType(t.BaseType.Resolve()));
+        private static bool unsafeType(TypeDefinition td)
+            => td.TraverseNodes(t => t.BaseType?.Resolve())
+                 .Any(t => t.Namespace == winformsNamespace)
+               && !isEventArgs(td);
+
+        private static bool isEventArgs(TypeDefinition td)
+            => td.TraverseNodes(t => t.BaseType?.Resolve())
+                 .Any(t => t is { Namespace: "System", Name: "EventArgs" });
 
         private static readonly Type   forbidAttrib      = typeof(ForbidGUICallsAttribute);
         private static readonly string winformsNamespace = typeof(Control).Namespace!;

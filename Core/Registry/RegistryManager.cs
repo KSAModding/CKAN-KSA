@@ -8,7 +8,7 @@ using System.ComponentModel;
 using System.Reflection;
 using System.Diagnostics.CodeAnalysis;
 
-using ChinhDo.Transactions.FileManager;
+using ChinhDo.Transactions;
 using log4net;
 using Newtonsoft.Json;
 
@@ -344,7 +344,8 @@ namespace CKAN
         private static Registry LoadRegistry(GameInstance          inst,
                                              RepositoryDataManager repoData)
             => Registry.FromJson(inst, repoData,
-                                 File.ReadAllText(Path.Combine(inst.CkanDir, "registry.json")));
+                                 File.ReadAllText(Path.Combine(inst.CkanDir, "registry.json"),
+                                                  Encoding.UTF8));
 
         [MemberNotNull(nameof(registry))]
         private void Create(RepositoryDataManager   repoData,
@@ -388,7 +389,7 @@ namespace CKAN
 
         public void Save(bool enforce_consistency = true)
         {
-            TxFileManager file_transaction = new TxFileManager();
+            var txFileMgr = new TxFileManager(gameInstance.CkanDir);
 
             log.InfoFormat("Saving CKAN registry at {0}", path);
 
@@ -412,7 +413,7 @@ namespace CKAN
                 Directory.CreateDirectory(directoryPath);
             }
 
-            file_transaction.WriteAllText(path, Serialize());
+            txFileMgr.WriteAllText(path, Serialize(), Encoding.UTF8);
 
             if (!Directory.Exists(gameInstance.InstallHistoryDir))
             {
@@ -444,11 +445,11 @@ namespace CKAN
                                      bool                recommends,
                                      bool                withVersions)
         {
-            var tx         = new TxFileManager();
+            var txFileMgr = new TxFileManager(gameInstance.CkanDir);
             var serialized = SerializeCurrentInstall(recommends, withVersions);
             foreach (var path in paths)
             {
-                tx.WriteAllText(path, serialized);
+                txFileMgr.WriteAllText(path, serialized, Encoding.UTF8);
             }
         }
 

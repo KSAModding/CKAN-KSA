@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+
 using log4net;
 using Newtonsoft.Json.Linq;
+
 using CKAN.NetKAN.Extensions;
 using CKAN.NetKAN.Model;
 using CKAN.NetKAN.Sources.Github;
@@ -152,15 +154,7 @@ namespace CKAN.NetKAN.Transformers
                 json.SafeAdd("license", ghRepo.License.Id);
             }
 
-            // Make sure resources exist.
-            if (json["resources"] == null)
-            {
-                json["resources"] = new JObject();
-            }
-            if (json["resources"] is JObject resourcesJson)
-            {
-                SetRepoResources(ghRepo, resourcesJson);
-            }
+            json.SafeMerge("resources", ghRepo.Resources);
 
             if (ghRelease?.Tag != null)
             {
@@ -213,9 +207,8 @@ namespace CKAN.NetKAN.Transformers
                     json.SafeAdd("release_status", "testing");
                 }
 
-                json.SafeMerge(
-                    "x_netkan_version_pieces",
-                    JObject.FromObject(new Dictionary<string, string>{ {"tag", ghRelease.Tag.ToString()} }));
+                json.SafeMerge("x_netkan_version_pieces",
+                               new JObject() { { "tag", ghRelease.Tag.ToString() } });
 
                 Log.DebugFormat("Transformed metadata:{0}{1}", Environment.NewLine, json);
 
@@ -225,24 +218,6 @@ namespace CKAN.NetKAN.Transformers
             {
                 Log.WarnFormat("No releases found for {0}", ghRef.Repository);
                 return metadata;
-            }
-        }
-
-        public static void SetRepoResources(GithubRepo repo, JObject resources)
-        {
-            resources.SafeAdd("repository", repo.HtmlUrl);
-            if (!string.IsNullOrWhiteSpace(repo.Homepage))
-            {
-                resources.SafeAdd("homepage", repo.Homepage);
-            }
-            if (repo.HasIssues)
-            {
-                // issues_url ends with {/number} which makes it kind of useless
-                resources.SafeAdd("bugtracker", $"{repo.HtmlUrl}/issues");
-            }
-            if (repo.HasDiscussions)
-            {
-                resources.SafeAdd("discussions", $"{repo.HtmlUrl}/discussions");
             }
         }
 

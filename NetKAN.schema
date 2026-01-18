@@ -51,7 +51,11 @@
                 },
                 {
                     "pattern": "^#/ckan/gitlab/[A-Za-z0-9_-]+/[A-Za-z0-9_-]+$",
-                    "description": "Indicates that data should be fetched from the GitLab the user and repo provided"
+                    "description": "Indicates that data should be fetched from the GitLab  user and repo provided"
+                },
+                {
+                    "pattern": "^#/ckan/gitea/[A-Za-z0-9_.-]+/[A-Za-z0-9_-]+/[A-Za-z0-9_-]+$",
+                    "description": "Indicates that data should be fetched from the Gitea host, user, and repo provided"
                 },
                 {
                     "pattern": "^#/ckan/sourceforge/.+$",

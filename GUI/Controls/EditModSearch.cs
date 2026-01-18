@@ -140,7 +140,7 @@ namespace CKAN.GUI
                     // Sync the search boxes immediately
                     currentSearch = ModSearch.Parse(ModuleLabelList.ModuleLabels, inst, FilterCombinedTextBox.Text);
                 }
-                SearchToEditor();
+                Util.Invoke(this, SearchToEditor);
             }
             catch (Kraken k)
             {

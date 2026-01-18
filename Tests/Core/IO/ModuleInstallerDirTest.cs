@@ -60,7 +60,7 @@ namespace Tests.Core.IO
             _manager.Cache?.Store(_testModule!, testModFile, new Progress<long>(bytes => {}));
             HashSet<string>? possibleConfigOnlyDirs = null;
             _installer.InstallList(
-                new List<CkanModule>() { _testModule! },
+                new CkanModule[] { _testModule! },
                 new RelationshipResolverOptions(_instance.KSP.StabilityToleranceConfig),
                 _registryManager,
                 ref possibleConfigOnlyDirs);

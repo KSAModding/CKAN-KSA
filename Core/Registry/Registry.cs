@@ -1149,7 +1149,7 @@ namespace CKAN
         /// <returns>List of modules whose dependencies are about to be or already removed.</returns>
         public static IEnumerable<string> FindReverseDependencies(
             IReadOnlyCollection<string>                 modulesToRemove,
-            IReadOnlyCollection<CkanModule>?            modulesToInstall,
+            IReadOnlyCollection<CkanModule>             modulesToInstall,
             IReadOnlyCollection<CkanModule>             origInstalled,
             IReadOnlyCollection<string>                 dlls,
             IDictionary<string, UnmanagedModuleVersion> dlc,
@@ -1157,10 +1157,7 @@ namespace CKAN
         {
             log.DebugFormat("Finding reverse dependencies of: {0}", string.Join(", ", modulesToRemove));
             log.DebugFormat("From installed mods: {0}", string.Join(", ", origInstalled));
-            if (modulesToInstall != null)
-            {
-                log.DebugFormat("Installing mods: {0}", string.Join(", ", modulesToInstall));
-            }
+            log.DebugFormat("Installing mods: {0}", string.Join(", ", modulesToInstall));
 
             // The empty list has no reverse dependencies
             // (Don't remove broken modules if we're only installing)
@@ -1174,15 +1171,12 @@ namespace CKAN
                 while (true)
                 {
                     // Make our hypothetical install, and remove the listed modules from it.
-                    // Clone because we alter hypothetical.
-                    var hypothetical = origInstalled.ToHashSet();
-                    if (modulesToInstall != null)
-                    {
-                        // Pretend the mods we are going to install are already installed, so that dependencies that will be
-                        // satisfied by a mod that is going to be installed count as satisfied.
-                        hypothetical.UnionWith(modulesToInstall);
-                    }
-                    hypothetical.RemoveWhere(mod => modulesToRemove.Contains(mod.identifier));
+                    var hypothetical = origInstalled.Where(m => !modulesToRemove.Contains(m.identifier))
+                                                    // Pretend the mods we are going to install are already installed,
+                                                    // so that dependencies that will be satisfied by a mod that is
+                                                    // going to be installed count as satisfied.
+                                                    .Concat(modulesToInstall)
+                                                    .ToHashSet();
 
                     log.DebugFormat("Removing: {0}", string.Join(", ", modulesToRemove));
                     log.DebugFormat("Keeping: {0}", string.Join(", ", hypothetical));
@@ -1190,6 +1184,8 @@ namespace CKAN
                     // Find what would break with this configuration
                     var brokenDeps = SanityChecker.FindUnsatisfiedDepends(hypothetical,
                                                                           dlls, dlc)
+                                                  // Dependencies of mods to install will be handled when they're installed
+                                                  .Where(tuple => !modulesToInstall.Contains(tuple.Item1))
                                                   .ToList();
                     if (satisfiedFilter != null)
                     {
@@ -1198,13 +1194,10 @@ namespace CKAN
                     var brokenIdents = brokenDeps.Select(tuple => tuple.Item1.identifier)
                                                  .ToHashSet();
 
-                    if (modulesToInstall != null)
-                    {
-                        // Make sure to only report modules as broken if they are actually currently installed.
-                        // This is mainly to remove the modulesToInstall again which we added
-                        // earlier to the hypothetical list.
-                        brokenIdents.IntersectWith(origInstalled.Select(m => m.identifier));
-                    }
+                    // Make sure to only report modules as broken if they are actually currently installed.
+                    // This is mainly to remove the modulesToInstall again which we added
+                    // earlier to the hypothetical list.
+                    brokenIdents.IntersectWith(origInstalled.Select(m => m.identifier));
                     log.DebugFormat("Broken: {0}", string.Join(", ", brokenIdents));
                     // Lazily return each newly found rev dep
                     foreach (var newFound in brokenIdents.Except(modulesToRemove))
@@ -1235,7 +1228,7 @@ namespace CKAN
                 IReadOnlyCollection<string>         modulesToRemove,
                 IReadOnlyCollection<CkanModule>?    modulesToInstall = null,
                 Func<RelationshipDescriptor, bool>? satisfiedFilter  = null)
-            => FindReverseDependencies(modulesToRemove, modulesToInstall,
+            => FindReverseDependencies(modulesToRemove, modulesToInstall ?? Array.Empty<CkanModule>(),
                                        installed_modules.Values.Select(im => im.Module)
                                                                .ToHashSet(),
                                        InstalledDlls, InstalledDlc,

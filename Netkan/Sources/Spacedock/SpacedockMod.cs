@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace CKAN.NetKAN.Sources.Spacedock
 {
@@ -19,6 +20,15 @@ namespace CKAN.NetKAN.Sources.Spacedock
         [JsonProperty] public int                 default_version_id;
         [JsonProperty] public SpacedockUser[]?    shared_authors;
         [JsonProperty] public Uri?                background;
+
+        [JsonIgnore]
+        public JObject Resources => new JObject()
+        {
+            { "spacedock",    GetPageUrl().OriginalString },
+            { "homepage",     Net.NormalizeUri(website                ?? "") },
+            { "repository",   Net.NormalizeUri(source_code            ?? "") },
+            { "x_screenshot", Net.NormalizeUri(background?.ToString() ?? "") },
+        };
 
         public IEnumerable<SpacedockVersion> All()
             // The version we want is specified by `default_version_id`, it's not just

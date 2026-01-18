@@ -69,12 +69,12 @@ namespace CKAN.NetKAN.Transformers
                                              SourceForgeVersion version)
         {
             json.SafeAdd("name",     mod.Title);
-            json.SafeMerge("resources", JObject.FromObject(new Dictionary<string, string?>()
+            json.SafeMerge("resources", new JObject()
             {
                 { "homepage",   mod.HomepageLink   },
                 { "repository", mod.RepositoryLink },
                 { "bugtracker", mod.BugTrackerLink },
-            }));
+            });
             // SourceForge doesn't send redirects to user agents it considers browser-like
             if (Net.ResolveRedirect(version.Link, "Wget", 1) is Uri firstRedir)
             {

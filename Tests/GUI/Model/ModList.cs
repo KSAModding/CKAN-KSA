@@ -777,7 +777,7 @@ namespace Tests.GUI
 
                 HashSet<string>? possibleConfigOnlyDirs = null;
                 installer.InstallList(
-                    new List<CkanModule> { anyVersionModule },
+                    new CkanModule[] { anyVersionModule },
                     new RelationshipResolverOptions(instance.KSP.StabilityToleranceConfig),
                     regMgr,
                     ref possibleConfigOnlyDirs,
@@ -825,7 +825,7 @@ namespace Tests.GUI
                         installer.InstallList(
                             modList.ComputeUserChangeSet(Registry.Empty(repoData.Manager), inst2.KSP, null, null)
                                    .Select(change => change.Mod)
-                                   .ToList(),
+                                   .ToArray(),
                             new RelationshipResolverOptions(inst2.KSP.StabilityToleranceConfig),
                             regMgr,
                             ref possibleConfigOnlyDirs,

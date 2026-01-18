@@ -79,11 +79,11 @@ namespace CKAN.NetKAN.Transformers
 
                     if (remoteUri != null && avc.version != null)
                     {
-                        if (resourcesJson == null)
-                        {
-                            json["resources"] = resourcesJson = new JObject();
-                        }
-                        resourcesJson.SafeAdd("remote-avc", remoteUri.OriginalString);
+                        json.SafeMerge("resources",
+                                       new JObject()
+                                       {
+                                           { "remote-avc", remoteUri.OriginalString },
+                                       });
 
                         try
                         {

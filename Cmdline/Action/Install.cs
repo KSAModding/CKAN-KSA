@@ -118,6 +118,7 @@ namespace CKAN.CmdLine
                 without_enforce_consistency    = user.Headless,
             };
 
+            var autoInstalled = new HashSet<CkanModule>();
             for (bool done = false; !done; )
             {
                 // Install everything requested. :)
@@ -129,7 +130,8 @@ namespace CKAN.CmdLine
                                           new InstalledFilesDeduplicator(instance,
                                                                          manager.Instances.Values,
                                                                          repoData),
-                                          options?.NetUserAgent);
+                                          options?.NetUserAgent,
+                                          null, autoInstalled);
                     user.RaiseMessage("");
                     done = true;
                 }
@@ -165,6 +167,7 @@ namespace CKAN.CmdLine
 
                     // Add the module to the list.
                     modules.Add(choices[result]);
+                    autoInstalled.Add(choices[result]);
                     // DON'T return so we can loop around and try again
                 }
                 catch (CancelledActionKraken k)

@@ -52,14 +52,14 @@ namespace CKAN.NetKAN.Transformers
                     // Set .resources.repository based on GITHUB properties
                     if (remoteAvc.Github?.Username != null && remoteAvc.Github?.Repository != null)
                     {
-                        // Make sure resources exist.
-                        if (json["resources"] == null)
-                        {
-                            json["resources"] = new JObject();
-                        }
-
-                        var resourcesJson = (JObject?)json["resources"];
-                        resourcesJson?.SafeAdd("repository", $"https://github.com/{remoteAvc.Github.Username}/{remoteAvc.Github.Repository}");
+                        json.SafeMerge("resources",
+                                       new JObject()
+                                       {
+                                           {
+                                               "repository",
+                                               $"https://github.com/{remoteAvc.Github.Username}/{remoteAvc.Github.Repository}"
+                                           },
+                                       });
                     }
                     // Use standard KSP-AVC logic to set version and the ksp_version_* properties
                     AvcTransformer.ApplyVersions(metadata, json, remoteAvc);

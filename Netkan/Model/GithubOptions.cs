@@ -1,4 +1,5 @@
 using System.ComponentModel;
+
 using Newtonsoft.Json;
 
 namespace CKAN.NetKAN.Model

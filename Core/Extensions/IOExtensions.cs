@@ -27,7 +27,7 @@ namespace CKAN.Extensions
         {
             using (var stream = File.Create(path, contents.Length + 1,
                                             FileOptions.WriteThrough))
-            using (var writer = new StreamWriter(stream))
+            using (var writer = new StreamWriter(stream, Encoding.UTF8))
             {
                 writer.Write(contents);
                 // If we don't Flush, the file can be truncated,

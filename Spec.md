@@ -868,6 +868,29 @@ An `x_netkan_gitlab` field must be provided to customize how the metadata is fet
   Specifies that the source ZIP of the release will be used instead of any discrete assets.<br/>
   Note that this must be `true`! GitLab only offers source ZIP assets, so we can only index mods that use them. If at some point in the future GitLab adds support for non-source assets, we will be able to add support for setting this property to `false` or omitting it.
 
+###### `#/ckan/gitea/:host/:user/:repo`
+
+Indicates that data should be fetched from a Gitea / Forgejo instance, using the `:host`, `:user`, and `:repo` provided. For example: `#/ckan/gitea/git.offworldcolonies.nexus/drewcassidy/KSP-Conformal-Decals`.
+
+When used, the following fields will be auto-filled if not already present:
+
+- `name`
+- `abstract`
+- `author`
+- `version`
+- `download`
+- `release_date`
+- `resources.homepage`
+- `resources.repository`
+- `resources.bugtracker`
+- `resources.manual`
+
+An example `.netkan` excerpt:
+
+```yaml
+$kref: '#/ckan/gitea/git.offworldcolonies.nexus/drewcassidy/KSP-Conformal-Decals'
+```
+
 ###### `#/ckan/sourceforge/:repo`
 
 Indicates that data should be fetched from SourceForge using the `:repo` provided.

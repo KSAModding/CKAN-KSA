@@ -9,7 +9,8 @@ namespace CKAN.NetKAN.Services
         string? DownloadModule(Metadata metadata);
         string? DownloadText(Uri url, string? authToken = null, string? mimeType = null);
 
-        Uri? ResolveRedirect(Uri url, string? userAgent);
+        Uri? ResolveRedirect(Uri url);
+        bool HasRedirect(Uri url);
 
         IEnumerable<Uri> RequestedURLs { get; }
         void ClearRequestedURLs();
