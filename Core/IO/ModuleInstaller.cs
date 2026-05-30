@@ -83,19 +83,11 @@ namespace CKAN.IO
                 throw new ModuleIsDLCKraken(dlc.First());
             }
 
-            // Make sure we have enough space to install this stuff
-            var installBytes = modsToInstall.Sum(m => m.install_size);
-            CKANPathUtils.CheckFreeSpace(new DirectoryInfo(instance.GameDir),
-                                         installBytes,
-                                         Properties.Resources.NotEnoughSpaceToInstall);
-
+            // Check which mods need to be downloaded
             var cached    = new List<CkanModule>();
             var downloads = new List<CkanModule>();
-            User.RaiseMessage(Properties.Resources.ModuleInstallerAboutToInstall);
-            User.RaiseMessage("");
             foreach (var module in modsToInstall)
             {
-                User.RaiseMessage(" * {0}", cache.DescribeAvailability(config, module));
                 if (!module.IsMetapackage && !cache.IsMaybeCachedZip(module))
                 {
                     downloads.Add(module);
@@ -105,13 +97,30 @@ namespace CKAN.IO
                     cached.Add(module);
                 }
             }
+
+            // Make sure we have enough space to install this stuff
+            var installBytes  = modsToInstall.Sum(m => m.install_size);
+            var downloadBytes = CkanModule.GroupByDownloads(downloads)
+                                          .Sum(grp => grp.First().download_size);
+            CKANPathUtils.CheckFreeSpace(new DirectoryInfo(instance.GameDir),
+                                         cache.OnSameDevice(new DirectoryInfo(instance.GameDir))
+                                             // Check for combined download+install space if same device
+                                             ? downloadBytes + installBytes
+                                             : installBytes,
+                                         Properties.Resources.NotEnoughSpaceToInstall);
+
+            // Prompt user for confirmation, if needed
+            User.RaiseMessage(Properties.Resources.ModuleInstallerAboutToInstall);
+            User.RaiseMessage("");
+            foreach (var module in modsToInstall)
+            {
+                User.RaiseMessage(" * {0}", cache.DescribeAvailability(config, module));
+            }
             if (ConfirmPrompt && !User.RaiseYesNoDialog(Properties.Resources.ModuleInstallerContinuePrompt))
             {
                 throw new CancelledActionKraken(Properties.Resources.ModuleInstallerUserDeclined);
             }
 
-            var downloadBytes = CkanModule.GroupByDownloads(downloads)
-                                          .Sum(grp => grp.First().download_size);
             var rateCounter = new ByteRateCounter()
             {
                 Size      = downloadBytes + installBytes,
@@ -291,31 +300,41 @@ namespace CKAN.IO
             User.RaiseMessage(Properties.Resources.ModuleInstallerInstallingMod,
                               $"{module.name} {module.version}");
 
-            using (var transaction = CkanTransaction.CreateTransactionScope())
+            try
             {
-                // Install all the things!
-                var files = InstallModule(module, filename, registry, candidateDuplicates,
-                                          ref possibleConfigOnlyDirs, out int filteredCount, progress);
-
-                // Register our module and its files.
-                registry.RegisterModule(module, files, instance, autoInstalled);
-
-                // Finish our transaction, but *don't* save the registry; we may be in an
-                // intermediate, inconsistent state.
-                // This is fine from a transaction standpoint, as we may not have an enclosing
-                // transaction, and if we do, they can always roll us back.
-                transaction.Complete();
-
-                if (filteredCount > 0)
+                using (var transaction = CkanTransaction.CreateTransactionScope())
                 {
-                    User.RaiseMessage(Properties.Resources.ModuleInstallerInstalledModFiltered,
-                                      $"{module.name} {module.version}", filteredCount);
+                    // Install all the things!
+                    var files = InstallModule(module, filename, registry, candidateDuplicates,
+                                              ref possibleConfigOnlyDirs, out int filteredCount, progress);
+
+                    // Register our module and its files.
+                    registry.RegisterModule(module, files, instance, autoInstalled);
+
+                    // Finish our transaction, but *don't* save the registry; we may be in an
+                    // intermediate, inconsistent state.
+                    // This is fine from a transaction standpoint, as we may not have an enclosing
+                    // transaction, and if we do, they can always roll us back.
+                    transaction.Complete();
+
+                    if (filteredCount > 0)
+                    {
+                        User.RaiseMessage(Properties.Resources.ModuleInstallerInstalledModFiltered,
+                                          $"{module.name} {module.version}", filteredCount);
+                    }
+                    else
+                    {
+                        User.RaiseMessage(Properties.Resources.ModuleInstallerInstalledMod,
+                                          $"{module.name} {module.version}");
+                    }
                 }
-                else
-                {
-                    User.RaiseMessage(Properties.Resources.ModuleInstallerInstalledMod,
-                                      $"{module.name} {module.version}");
-                }
+            }
+            catch (ZipException zexc)
+            {
+                cache.Purge(module);
+                throw new InvalidModuleFileKraken(module, filename ?? "",
+                                                  string.Format(Properties.Resources.ModuleInstallerCorruptInCache,
+                                                                module, zexc.Message));
             }
 
             // Fire our callback that we've installed a module, if we have one.
@@ -616,12 +635,17 @@ namespace CKAN.IO
                 HashSet<string>     parents,
                 HashSet<string>     filters)
             => installed.Where(f => !filters.Any(filt => f.Contains(filt)))
-                        .GroupBy(parents.Contains)
+                        .Select(f => (relPath: f,
+                                      absPath: instance.ToAbsoluteGameDir(f)))
+                        .Select(f => (f.relPath, f.absPath,
+                                      dir: parents.Contains(f.relPath)
+                                           // Empty dirs are parents of nothing
+                                           || Directory.Exists(f.absPath)))
+                        .GroupBy(f => f.dir)
                         .SelectMany(grp =>
-                            grp.Select(p => (path:   p,
-                                             dir:    grp.Key,
-                                             exists: grp.Key ? Directory.Exists(instance.ToAbsoluteGameDir(p))
-                                                             : File.Exists(instance.ToAbsoluteGameDir(p)))));
+                            grp.Select(p => (path:   p.relPath, p.dir,
+                                             exists: grp.Key ? Directory.Exists(p.absPath)
+                                                             : File.Exists(p.absPath))));
 
         /// <summary>
         /// Returns the module contents if and only if we have it
@@ -1280,6 +1304,7 @@ namespace CKAN.IO
                             RegistryManager                    registry_manager,
                             InstalledFilesDeduplicator?        deduper            = null,
                             ISet<CkanModule>?                  autoInstalled      = null,
+                            ISet<CkanModule>?                  skipFiles          = null,
                             bool                               enforceConsistency = true,
                             bool                               ConfirmPrompt      = true)
         {
@@ -1313,11 +1338,13 @@ namespace CKAN.IO
                 fullChangeset.Remove(ident);
             }
 
-            // Only install stuff that's already there if explicitly requested in param
             var toInstall = fullChangeset.Values
+                                         // Only install stuff that's already there if explicitly requested in param
                                          .Except(registry.InstalledModules
                                                          .Select(im => im.Module)
                                                          .Except(modules))
+                                         // Don't touch files for mods in skipFiles (still need to handle their dependencies though)
+                                         .Except(skipFiles ?? new HashSet<CkanModule>())
                                          .ToArray();
             autoInstalled ??= new HashSet<CkanModule>();
             autoInstalled.UnionWith(toInstall.Where(resolver.IsAutoInstalled));
@@ -1424,6 +1451,13 @@ namespace CKAN.IO
                 throw new CancelledActionKraken(Properties.Resources.ModuleInstallerUpgradeUserDeclined);
             }
 
+            if (skipFiles != null)
+            {
+                foreach (var module in skipFiles.Intersect(modules))
+                {
+                    registry.ReregisterModule(instance, module);
+                }
+            }
             AddRemove(ref possibleConfigOnlyDirs,
                       registry_manager,
                       resolver,

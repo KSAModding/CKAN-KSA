@@ -20,6 +20,7 @@ namespace CKAN.GUI
         public InstallFiltersDialog(IConfiguration globalConfig, GameInstance instance)
         {
             InitializeComponent();
+            this.ScaleFonts();
             this.globalConfig = globalConfig;
             this.instance     = instance;
             presets           = instance.Game.InstallFilterPresets;
@@ -74,8 +75,9 @@ namespace CKAN.GUI
             InstanceFiltersTextBox.DeselectAll();
         }
 
-        private void InstallFiltersDialog_Closing(object? sender, CancelEventArgs? e)
+        protected override void OnFormClosing(FormClosingEventArgs e)
         {
+            base.OnFormClosing(e);
             var newGlobal   = GlobalFiltersTextBox.Text.Split(delimiters, StringSplitOptions.RemoveEmptyEntries);
             var newInstance = InstanceFiltersTextBox.Text.Split(delimiters, StringSplitOptions.RemoveEmptyEntries);
             Changed = !globalConfig.GetGlobalInstallFilters(instance.Game).SequenceEqual(newGlobal)
@@ -83,7 +85,7 @@ namespace CKAN.GUI
             if (Changed)
             {
                 globalConfig.SetGlobalInstallFilters(instance.Game, newGlobal);
-                instance.InstallFilters           = newInstance;
+                instance.InstallFilters = newInstance;
             }
         }
 

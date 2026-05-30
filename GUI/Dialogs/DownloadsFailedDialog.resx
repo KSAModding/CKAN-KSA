@@ -121,5 +121,6 @@
   <data name="RetryColumn.HeaderText" xml:space="preserve"><value>Retry?</value></data>
   <data name="SkipColumn.HeaderText" xml:space="preserve"><value>Skip?</value></data>
   <data name="ErrorColumn.HeaderText" xml:space="preserve"><value>Error</value></data>
+  <data name="CopyErrorToolStripMenuItem.Text" xml:space="preserve"><value>Copy errors to clipboard</value></data>
   <data name="RetryButton.Text" xml:space="preserve"><value>Retry</value></data>
 </root>

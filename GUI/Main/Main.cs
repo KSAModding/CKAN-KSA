@@ -68,22 +68,30 @@ namespace CKAN.GUI
             log.Info("Starting the GUI");
             if (//cmdlineArgs is [_, string focusIdent, ..]
                 cmdlineArgs.Length > 1
-                && cmdlineArgs[1] is string focusIdent)
+                && cmdlineArgs[1] is string { Length: >= 2 } focusIdentArg)
             {
-                if (//focusIdent is ['/', '/', .. var rest]
-                    focusIdent.Length > 2)
+                focusIdent = focusIdentArg;
+
+                // Strip any leading "//" or any leading "ckan://".
+                if (//focusIdentArg is ['/', '/', .. var rest]
+                    focusIdentArg.Length > 2
+                    && focusIdentArg.StartsWith("//"))
                 {
-                    focusIdent = focusIdent[2..];
+                    focusIdent = focusIdentArg[2..];
                 }
-                else if (//focusIdent is ['c', 'k', 'a', 'n', ':', '/', '/', .. var rest2]
-                    focusIdent.StartsWith("ckan://"))
+                else if (//focusIdenArg is ['c', 'k', 'a', 'n', ':', '/', '/', .. var rest2]
+                    focusIdentArg.Length > 7
+                    && focusIdentArg.StartsWith("ckan://"))
                 {
-                    focusIdent = focusIdent[7..];
+                    focusIdent = focusIdentArg[7..];
                 }
+
+                // Strip any trailing forward slashes.
                 if (//focusIdent is [.. var start, '/']
-                    focusIdent.EndsWith("/"))
+                    focusIdent is { Length: > 1 }
+                    && focusIdent.EndsWith("/"))
                 {
-                    focusIdent = focusIdent[..^1];
+                    focusIdent = focusIdent.TrimEnd('/');
                 }
             }
 
@@ -106,6 +114,12 @@ namespace CKAN.GUI
             Application.AddMessageFilter(this);
 
             InitializeComponent();
+            MainMenu.ScaleFonts();
+            StatusLabel.ScaleFonts();
+            StatusInstanceLabel.ScaleFonts();
+            StatusProgress.ScaleFonts();
+            minimizedContextMenuStrip.ScaleFonts();
+            this.ScaleFonts();
             // React when the user clicks a tag or filter link in mod info
             ModInfo.OnChangeFilter += ManageMods.Filter;
             ModInfo.ModuleDoubleClicked += ManageMods.ResetFilterAndSelectModOnList;
@@ -114,15 +128,11 @@ namespace CKAN.GUI
 
             Instance = this;
 
-            // Replace mono's broken, ugly toolstrip renderer
-            if (Platform.IsMono)
-            {
-                MainMenu.Renderer = new FlatToolStripRenderer();
-                FileToolStripMenuItem.DropDown.Renderer = new FlatToolStripRenderer();
-                settingsToolStripMenuItem.DropDown.Renderer = new FlatToolStripRenderer();
-                helpToolStripMenuItem.DropDown.Renderer = new FlatToolStripRenderer();
-                minimizedContextMenuStrip.Renderer = new FlatToolStripRenderer();
-            }
+            MainMenu.Renderer = new FlatToolStripRenderer();
+            FileToolStripMenuItem.DropDown.Renderer = new FlatToolStripRenderer();
+            settingsToolStripMenuItem.DropDown.Renderer = new FlatToolStripRenderer();
+            helpToolStripMenuItem.DropDown.Renderer = new FlatToolStripRenderer();
+            minimizedContextMenuStrip.Renderer = new FlatToolStripRenderer();
 
             // Initialize all user interaction dialogs.
             RecreateDialogs();
@@ -451,6 +461,9 @@ namespace CKAN.GUI
                                             .Resolve<IConfiguration>(),
                               configuration);
 
+            gameDiscordToolStripMenuItem.Text = string.Format("{0} Discord",
+                                                              CurrentInstance.Game.ShortName);
+
             if (configuration.CheckForUpdatesOnLaunch && CheckForCKANUpdate())
             {
                 UpdateCKAN();
@@ -718,7 +731,7 @@ namespace CKAN.GUI
                                 // Metapackages aren't intending to prompt users to choose providing mods
                                 rel.ExactMatch(registry_manager.registry, stabilityTolerance, crit, installed, toInstall)
                                 // Otherwise look for incompatible
-                                ?? rel.ExactMatch(registry_manager.registry, stabilityTolerance, null, installed, toInstall))
+                                ?? rel.ExactMatch(registry_manager.registry, stabilityTolerance, null, null, null))
                             .OfType<CkanModule>());
                     }
                     toInstall.Add(module);
@@ -728,7 +741,6 @@ namespace CKAN.GUI
                     currentUser.RaiseError("{0}", kraken.InnerException == null
                         ? kraken.Message
                         : $"{kraken.Message}: {kraken.InnerException.Message}");
-
                     continue;
                 }
                 catch (Exception ex)
@@ -746,7 +758,7 @@ namespace CKAN.GUI
 
             var modpacks = toInstall.Where(m => m.IsMetapackage)
                                     .ToArray();
-            if (modpacks.Any())
+            if (modpacks is { Length: > 0 })
             {
                 CkanModule.GetMinMaxVersions(modpacks,
                                              out _, out _,
@@ -791,10 +803,13 @@ namespace CKAN.GUI
                                Properties.Resources.AllModVersionsInstallYes,
                                Properties.Resources.AllModVersionsInstallNo))
             {
-                UpdateChangesDialog(toInstall.Select(m => new ModChange(m, GUIModChangeType.Install,
-                                                                        ServiceLocator.Container.Resolve<IConfiguration>()))
-                                             .ToList(),
-                                    null);
+                var tuple = ModList.ComputeFullChangeSetFromUserChangeSet(
+                    registry_manager.registry,
+                    toInstall.Select(m => new ModChange(m, GUIModChangeType.Install,
+                                                        ServiceLocator.Container.Resolve<IConfiguration>()))
+                             .ToHashSet(),
+                    ServiceLocator.Container.Resolve<IConfiguration>(), CurrentInstance);
+                UpdateChangesDialog(tuple.Item1.ToList(), tuple.Item2);
                 tabController.ShowTab(ChangesetTabPage.Name, 1);
             }
         }
@@ -971,6 +986,7 @@ namespace CKAN.GUI
                         Properties.Resources.MainGoBack);
                     if (result.Item1 != DialogResult.Yes)
                     {
+                        ManageMods.OnGameExit();
                         return;
                     }
                     else if (result.Item2)
@@ -999,9 +1015,11 @@ namespace CKAN.GUI
             tabController.ShowTab(ChangesetTabPage.Name, 1);
         }
 
-        private void RefreshModList(bool allowAutoUpdate, Dictionary<string, bool>? oldModules = null)
+        private void RefreshModList(bool                      allowAutoUpdate,
+                                    Dictionary<string, bool>? oldModules = null)
         {
-            tabController.RenameTab(WaitTabPage.Name, Properties.Resources.MainModListWaitTitle);
+            tabController.RenameTab(WaitTabPage.Name,
+                                    Properties.Resources.MainModListWaitTitle);
             ShowWaitDialog();
             DisableMainWindow();
             ActiveModInfo = null;
@@ -1009,14 +1027,25 @@ namespace CKAN.GUI
                 ManageMods.Update,
                 (sender, e) =>
                 {
-                    if (e != null)
+                    switch (e)
                     {
-                        if (allowAutoUpdate && e.Result is bool b && !b)
-                        {
+                        case { Error: Kraken k }:
+                            currentUser.RaiseMessage("{0}", k.Message);
+                            EnableMainWindow();
+                            Wait.Finish();
+                            break;
+
+                        case { Error: Exception exc }:
+                            currentUser.RaiseMessage("{0}", exc.ToString());
+                            EnableMainWindow();
+                            Wait.Finish();
+                            break;
+
+                        case { Result: false } when allowAutoUpdate:
                             UpdateRepo();
-                        }
-                        else
-                        {
+                            break;
+
+                        default:
                             UpdateTrayInfo();
                             HideWaitDialog();
                             EnableMainWindow();
@@ -1028,7 +1057,7 @@ namespace CKAN.GUI
                                 // Only do it the first time
                                 focusIdent = null;
                             }
-                        }
+                            break;
                     }
                 },
                 false,

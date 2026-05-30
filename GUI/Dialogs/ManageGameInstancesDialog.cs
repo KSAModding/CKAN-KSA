@@ -33,6 +33,9 @@ namespace CKAN.GUI
             manager = mgr;
             this.user = user;
             InitializeComponent();
+            InstanceListContextMenuStrip.ScaleFonts();
+            AddNewMenu.ScaleFonts();
+            this.ScaleFonts();
             DialogResult = DialogResult.Cancel;
 
             instanceDialog.Filter = GameFolderFilter();
@@ -49,11 +52,8 @@ namespace CKAN.GUI
             }
 
             // Set the renderer for the AddNewMenu
-            if (Platform.IsMono)
-            {
-                AddNewMenu.Renderer = new FlatToolStripRenderer();
-                InstanceListContextMenuStrip.Renderer = new FlatToolStripRenderer();
-            }
+            AddNewMenu.Renderer = new FlatToolStripRenderer();
+            InstanceListContextMenuStrip.Renderer = new FlatToolStripRenderer();
 
             UpdateInstancesList();
             UpdateButtonState();

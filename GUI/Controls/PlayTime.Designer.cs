@@ -80,6 +80,7 @@ namespace CKAN.GUI
             this.PlayTimeGrid.Size = new System.Drawing.Size(1536, 837);
             this.PlayTimeGrid.StandardTab = false;
             this.PlayTimeGrid.TabIndex = 1;
+            this.PlayTimeGrid.CurrentCellChanged += this.PlayTimeGrid_CurrentCellChanged;
             this.PlayTimeGrid.CellValueChanged += this.PlayTimeGrid_CellValueChanged;
             // 
             // NameColumn
@@ -131,8 +132,8 @@ namespace CKAN.GUI
             // 
             // PlayTime
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 16F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
             this.Controls.Add(this.PlayTimeGrid);
             this.Controls.Add(this.EditHelpLabel);
             this.Controls.Add(this.BottomButtonPanel);

@@ -56,6 +56,38 @@ namespace System.Linq
 
         #if NETFRAMEWORK || NETSTANDARD2_0
 
+        public static TSource? MaxBy<TSource, TKey>(this IEnumerable<TSource> source,
+                                                    Func<TSource, TKey>       keySelector,
+                                                    IComparer<TKey>?          comparer = null)
+        {
+            using (var iterator = source.GetEnumerator())
+            {
+                if (!iterator.MoveNext())
+                {
+                    if (default(TSource) == null)
+                    {
+                        return default;
+                    }
+                    throw new InvalidOperationException("Sequence contains no elements");
+                }
+
+                comparer ??= Comparer<TKey>.Default;
+                var maxElement = iterator.Current;
+                var maxKey     = keySelector(maxElement);
+                while (iterator.MoveNext())
+                {
+                    var currentElement = iterator.Current;
+                    var currentKey     = keySelector(currentElement);
+                    if (comparer.Compare(currentKey, maxKey) > 0)
+                    {
+                        maxElement = currentElement;
+                        maxKey     = currentKey;
+                    }
+                }
+                return maxElement;
+            }
+        }
+
         /// <summary>
         /// Eliminate duplicate elements based on the value returned by a callback
         /// </summary>
@@ -64,6 +96,16 @@ namespace System.Linq
         /// <returns>Sequence where each element has a unique return value</returns>
         public static IEnumerable<T> DistinctBy<T, U>(this IEnumerable<T> seq, Func<T, U> func)
             => seq.GroupBy(func).Select(grp => grp.First());
+
+        /// <summary>
+        /// Eliminate duplicate elements based on the value returned by a callback and a comparer
+        /// </summary>
+        /// <param name="seq">Sequence of elements to check</param>
+        /// <param name="func">Function to return a value per element</param>
+        /// <param name="comparer">Comparer to check whether two values are the same</param>
+        /// <returns>Sequence where each element has a unique return value</returns>
+        public static IEnumerable<T> DistinctBy<T, U>(this IEnumerable<T> seq, Func<T, U> func, IEqualityComparer<U> comparer)
+            => seq.GroupBy(func, comparer).Select(grp => grp.First());
 
         /// <summary>
         /// Make pairs out of the elements of two sequences

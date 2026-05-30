@@ -37,7 +37,6 @@
 **/System.Net.WebSockets.Client.dll
 **/System.Net.WebSockets.dll
 **/System.Numerics.dll
-**/System.Numerics.Vectors.dll
 **/System.Reflection.DispatchProxy.dll
 **/System.Reflection.dll
 **/System.Reflection.Emit.dll
@@ -63,8 +62,6 @@
 **/System.ServiceProcess.dll
 **/System.Text.Encoding.CodePages.dll
 **/System.Text.Encoding.dll
-**/System.Text.Encodings.Web.dll
-**/System.Text.Json.dll
 **/System.Threading.Overlapped.dll
 **/System.Threading.Tasks.Dataflow.dll
 **/System.Threading.Tasks.dll

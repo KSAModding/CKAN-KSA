@@ -67,12 +67,14 @@ namespace CKAN.GUI
             this.DependsGraphTree.Name = "DependsGraphTree";
             this.DependsGraphTree.Size = new System.Drawing.Size(494, 340);
             this.DependsGraphTree.TabIndex = 0;
+            this.DependsGraphTree.Margin = new System.Windows.Forms.Padding(0);
             this.DependsGraphTree.NodeMouseDoubleClick += new System.Windows.Forms.TreeNodeMouseClickEventHandler(this.DependsGraphTree_NodeMouseDoubleClick);
             this.DependsGraphTree.ShowNodeToolTips = true;
             this.DependsGraphTree.ImageList = new System.Windows.Forms.ImageList(this.components)
             {
                 // ImageList's default makes icons look like garbage
-                ColorDepth = System.Windows.Forms.ColorDepth.Depth32Bit
+                ColorDepth = System.Windows.Forms.ColorDepth.Depth32Bit,
+                ImageSize  = CreateGraphics().ScaledSize(16, 16),
             };
             this.DependsGraphTree.ImageList.Images.Add("Root", global::CKAN.GUI.EmbeddedImages.ksp);
             this.DependsGraphTree.ImageList.Images.Add("Provides", global::CKAN.GUI.EmbeddedImages.ballot);
@@ -81,6 +83,7 @@ namespace CKAN.GUI
             this.DependsGraphTree.ImageList.Images.Add("Suggests", global::CKAN.GUI.EmbeddedImages.info);
             this.DependsGraphTree.ImageList.Images.Add("Supports", global::CKAN.GUI.EmbeddedImages.smile);
             this.DependsGraphTree.ImageList.Images.Add("Conflicts", global::CKAN.GUI.EmbeddedImages.alert);
+            this.DependsGraphTree.ImageList.Images.Add("InstalledConflicts", global::CKAN.GUI.EmbeddedImages.stop);
             //
             // LegendTable
             //
@@ -100,19 +103,19 @@ namespace CKAN.GUI
             this.LegendTable.Controls.Add(this.LegendProvidesLabel, 1, 1);
             this.LegendTable.Controls.Add(this.LegendDependsImage, 0, 2);
             this.LegendTable.Controls.Add(this.LegendDependsLabel, 1, 2);
-            this.LegendTable.Controls.Add(this.LegendRecommendsImage, 2, 1);
-            this.LegendTable.Controls.Add(this.LegendRecommendsLabel, 3, 1);
-            this.LegendTable.Controls.Add(this.LegendSuggestsImage, 2, 2);
-            this.LegendTable.Controls.Add(this.LegendSuggestsLabel, 3, 2);
-            this.LegendTable.Controls.Add(this.LegendSupportsImage, 4, 1);
-            this.LegendTable.Controls.Add(this.LegendSupportsLabel, 5, 1);
-            this.LegendTable.Controls.Add(this.LegendConflictsImage, 4, 2);
-            this.LegendTable.Controls.Add(this.LegendConflictsLabel, 5, 2);
+            this.LegendTable.Controls.Add(this.LegendConflictsImage, 2, 1);
+            this.LegendTable.Controls.Add(this.LegendConflictsLabel, 3, 1);
+            this.LegendTable.Controls.Add(this.LegendRecommendsImage, 2, 2);
+            this.LegendTable.Controls.Add(this.LegendRecommendsLabel, 3, 2);
+            this.LegendTable.Controls.Add(this.LegendSuggestsImage, 4, 1);
+            this.LegendTable.Controls.Add(this.LegendSuggestsLabel, 5, 1);
+            this.LegendTable.Controls.Add(this.LegendSupportsImage, 4, 2);
+            this.LegendTable.Controls.Add(this.LegendSupportsLabel, 5, 2);
             this.LegendTable.Dock = System.Windows.Forms.DockStyle.Bottom;
             this.LegendTable.Location = new System.Drawing.Point(0, 0);
             this.LegendTable.Name = "LegendTable";
             this.LegendTable.Padding = new System.Windows.Forms.Padding(0, 6, 0, 0);
-            this.LegendTable.Margin = new System.Windows.Forms.Padding(0, 0, 0, 0);
+            this.LegendTable.Margin = new System.Windows.Forms.Padding(0);
             this.LegendTable.RowCount = 3;
             this.LegendTable.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.AutoSize));
             this.LegendTable.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.AutoSize));
@@ -123,21 +126,21 @@ namespace CKAN.GUI
             // LegendInstalledLabel
             //
             this.LegendInstalledLabel.AutoSize = true;
-            this.LegendInstalledLabel.Font = new System.Drawing.Font(System.Drawing.SystemFonts.DefaultFont.Name, 8, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point);
+            this.LegendInstalledLabel.Font = new System.Drawing.Font(System.Drawing.SystemFonts.DefaultFont, System.Drawing.FontStyle.Bold);
             this.LegendInstalledLabel.Padding = new System.Windows.Forms.Padding(0, 0, 0, 6);
             resources.ApplyResources(this.LegendInstalledLabel, "LegendInstalledLabel");
             //
             // LegendIncompatibleLabel
             //
             this.LegendIncompatibleLabel.AutoSize = true;
-            this.LegendIncompatibleLabel.ForeColor = System.Drawing.Color.Red;
+            this.LegendIncompatibleLabel.ForeColor = System.Drawing.SystemColors.GrayText;
             this.LegendIncompatibleLabel.Padding = new System.Windows.Forms.Padding(0, 0, 0, 6);
             resources.ApplyResources(this.LegendIncompatibleLabel, "LegendIncompatibleLabel");
             //
             // LegendVirtualLabel
             //
             this.LegendVirtualLabel.AutoSize = true;
-            this.LegendVirtualLabel.ForeColor = System.Drawing.SystemColors.GrayText;
+            this.LegendVirtualLabel.Font = new System.Drawing.Font(System.Drawing.SystemFonts.DefaultFont, System.Drawing.FontStyle.Italic);
             this.LegendVirtualLabel.Padding = new System.Windows.Forms.Padding(0, 0, 0, 6);
             resources.ApplyResources(this.LegendVirtualLabel, "LegendVirtualLabel");
             //
@@ -241,8 +244,8 @@ namespace CKAN.GUI
             //
             // Relationships
             //
-            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 16F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
             this.Controls.Add(this.DependsGraphTree);
             this.Controls.Add(this.LegendTable);
             this.Controls.Add(this.ReverseRelationshipsCheckbox);

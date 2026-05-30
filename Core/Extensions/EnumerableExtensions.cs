@@ -60,6 +60,10 @@ namespace CKAN.Extensions
             }
         }
 
+        public static bool IntersectsWith<T>(this IEnumerable<T> source,
+                                             IEnumerable<T>      other)
+            => source.Intersect(other).Any();
+
         /// <summary>
         /// Sum a sequence of TimeSpans.
         /// Mysteriously not defined standardly.

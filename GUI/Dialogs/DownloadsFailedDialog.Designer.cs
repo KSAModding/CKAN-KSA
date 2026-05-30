@@ -36,6 +36,8 @@ namespace CKAN.GUI
             this.SkipColumn = new System.Windows.Forms.DataGridViewCheckBoxColumn();
             this.ModColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.ErrorColumn = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.GridContextMenuStrip = new System.Windows.Forms.ContextMenuStrip();
+            this.CopyErrorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.BottomButtonPanel = new CKAN.GUI.LeftRightRowPanel();
             this.RetryButton = new System.Windows.Forms.Button();
             this.AbortButton = new System.Windows.Forms.Button();
@@ -45,11 +47,13 @@ namespace CKAN.GUI
             //
             // ExplanationLabel
             //
+            this.ExplanationLabel.AutoSize = true;
+            this.ExplanationLabel.MaximumSize = new System.Drawing.Size(490, 0);
             this.ExplanationLabel.Dock = System.Windows.Forms.DockStyle.Top;
-            this.ExplanationLabel.Font = new System.Drawing.Font(System.Drawing.SystemFonts.DefaultFont.Name, 12, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Pixel);
+            this.ExplanationLabel.Font = new System.Drawing.Font(System.Drawing.SystemFonts.DefaultFont, System.Drawing.FontStyle.Bold);
             this.ExplanationLabel.Location = new System.Drawing.Point(5, 0);
             this.ExplanationLabel.Name = "ExplanationLabel";
-            this.ExplanationLabel.Padding = new System.Windows.Forms.Padding(5,5,5,5);
+            this.ExplanationLabel.Padding = new System.Windows.Forms.Padding(0, 0, 0, 8);
             this.ExplanationLabel.Size = new System.Drawing.Size(490, 60);
             resources.ApplyResources(this.ExplanationLabel, "ExplanationLabel");
             //
@@ -57,6 +61,7 @@ namespace CKAN.GUI
             //
             this.DownloadsGrid.Dock = System.Windows.Forms.DockStyle.Fill;
             this.DownloadsGrid.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.Fill;
+            this.DownloadsGrid.AutoSizeRowsMode = System.Windows.Forms.DataGridViewAutoSizeRowsMode.AllCells;
             this.DownloadsGrid.AllowUserToAddRows = false;
             this.DownloadsGrid.AllowUserToDeleteRows = false;
             this.DownloadsGrid.AllowUserToResizeRows = false;
@@ -87,12 +92,14 @@ namespace CKAN.GUI
             this.DownloadsGrid.CellMouseDoubleClick += new System.Windows.Forms.DataGridViewCellMouseEventHandler(this.DownloadsGrid_CellMouseDoubleClick);
             this.DownloadsGrid.CellEndEdit += new System.Windows.Forms.DataGridViewCellEventHandler(this.DownloadsGrid_CellEndEdit);
             this.DownloadsGrid.SelectionChanged += new System.EventHandler(DownloadsGrid_SelectionChanged);
+            this.DownloadsGrid.MouseDown += new System.Windows.Forms.MouseEventHandler(this.DownloadsGrid_MouseDown);
             //
             // RetryColumn
             //
             this.RetryColumn.Name = "RetryColumn";
             this.RetryColumn.DataPropertyName = "Retry";
             this.RetryColumn.DefaultCellStyle.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleCenter;
+            this.RetryColumn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.RetryColumn.Width = 46;
             this.RetryColumn.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.None;
             resources.ApplyResources(this.RetryColumn, "RetryColumn");
@@ -102,6 +109,7 @@ namespace CKAN.GUI
             this.SkipColumn.Name = "SkipColumn";
             this.SkipColumn.DataPropertyName = "Skip";
             this.SkipColumn.DefaultCellStyle.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleCenter;
+            this.SkipColumn.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.SkipColumn.Width = 46;
             this.SkipColumn.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.None;
             resources.ApplyResources(this.SkipColumn, "SkipColumn");
@@ -112,8 +120,7 @@ namespace CKAN.GUI
             this.ModColumn.DataPropertyName = "Data";
             this.ModColumn.ReadOnly = true;
             this.ModColumn.Width = 250;
-            this.ModColumn.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
-            this.ModColumn.FillWeight = 250;
+            this.ModColumn.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCells;
             resources.ApplyResources(this.ModColumn, "ModColumn");
             //
             // ErrorColumn
@@ -124,7 +131,22 @@ namespace CKAN.GUI
             this.ErrorColumn.Width = 500;
             this.ErrorColumn.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
             this.ErrorColumn.FillWeight = 500;
+            this.ErrorColumn.DefaultCellStyle.WrapMode = System.Windows.Forms.DataGridViewTriState.True;
             resources.ApplyResources(this.ErrorColumn, "ErrorColumn");
+            //
+            // GridContextMenuStrip
+            //
+            this.GridContextMenuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.CopyErrorToolStripMenuItem});
+            this.GridContextMenuStrip.Name = "GridContextMenuStrip";
+            this.GridContextMenuStrip.Size = new System.Drawing.Size(180, 70);
+            //
+            // CopyErrorToolStripMenuItem
+            //
+            this.CopyErrorToolStripMenuItem.Name = "CopyErrorToolStripMenuItem";
+            this.CopyErrorToolStripMenuItem.Size = new System.Drawing.Size(179, 22);
+            this.CopyErrorToolStripMenuItem.Click += new System.EventHandler(this.CopyErrorToolStripMenuItem_Click);
+            resources.ApplyResources(this.CopyErrorToolStripMenuItem, "CopyErrorToolStripMenuItem");
             //
             // BottomButtonPanel
             //
@@ -157,8 +179,8 @@ namespace CKAN.GUI
             //
             // DownloadsFailedDialog
             //
-            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 16F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
             this.Controls.Add(this.DownloadsGrid);
             this.Controls.Add(this.ExplanationLabel);
             this.Controls.Add(this.BottomButtonPanel);
@@ -187,6 +209,8 @@ namespace CKAN.GUI
         private System.Windows.Forms.DataGridViewCheckBoxColumn SkipColumn;
         private System.Windows.Forms.DataGridViewTextBoxColumn ModColumn;
         private System.Windows.Forms.DataGridViewTextBoxColumn ErrorColumn;
+        private System.Windows.Forms.ContextMenuStrip GridContextMenuStrip;
+        private System.Windows.Forms.ToolStripMenuItem CopyErrorToolStripMenuItem;
         private CKAN.GUI.LeftRightRowPanel BottomButtonPanel;
         private System.Windows.Forms.Button RetryButton;
         private System.Windows.Forms.Button AbortButton;

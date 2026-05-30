@@ -18,6 +18,10 @@ namespace CKAN.GUI
         public PreferredHostsDialog(IConfiguration config, Registry registry)
         {
             InitializeComponent();
+            ExplanationLabel.ScaleFonts();
+            PreferredHostsLabel.ScaleFonts();
+            AvailableHostsLabel.ScaleFonts();
+            this.ScaleFonts();
             this.config = config;
             allHosts    = registry.GetAllHosts().ToArray();
             placeholder = Properties.Resources.PreferredHostsPlaceholder;
@@ -26,6 +30,7 @@ namespace CKAN.GUI
             ToolTip.SetToolTip(MoveLeftButton,  Properties.Resources.PreferredHostsTooltipMoveLeft);
             ToolTip.SetToolTip(MoveUpButton,    Properties.Resources.PreferredHostsTooltipMoveUp);
             ToolTip.SetToolTip(MoveDownButton,  Properties.Resources.PreferredHostsTooltipMoveDown);
+            ToolTip.ScaleFonts();
         }
 
         /// <summary>
@@ -57,8 +62,9 @@ namespace CKAN.GUI
             PreferredHostsListBox_SelectedIndexChanged(null, null);
         }
 
-        private void PreferredHostsDialog_Closing(object? sender, CancelEventArgs? e)
+        protected override void OnFormClosing(FormClosingEventArgs e)
         {
+            base.OnFormClosing(e);
             config.PreferredHosts = PreferredHostsListBox.Items
                                                          .OfType<string>()
                                                          .Select(h => h == placeholder ? null : h)

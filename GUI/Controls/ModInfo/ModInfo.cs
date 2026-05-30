@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using System.Linq;
 using System.Windows.Forms;
 #if NET5_0_OR_GREATER
@@ -20,12 +21,16 @@ namespace CKAN.GUI
         public ModInfo()
         {
             InitializeComponent();
+            MetadataModuleNameTextBox.ScaleFonts();
+            MetadataModuleAbstractLabel.ScaleFonts();
+            MetadataModuleDescriptionTextBox.ScaleFonts();
             Contents.OnDownloadClick += gmod => OnDownloadClick?.Invoke(gmod);
             Relationships.ModuleDoubleClicked += mod => ModuleDoubleClicked?.Invoke(mod);
             tagsLabelsLinkList.ShowHideTag += t => ShowHideTag?.Invoke(t);
             tagsLabelsLinkList.AddRemoveModuleLabel += l => AddRemoveModuleLabel?.Invoke(l);
         }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public GUIMod? SelectedModule
         {
             set

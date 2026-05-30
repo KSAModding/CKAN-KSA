@@ -2,12 +2,42 @@
 
 All notable changes to this project will be documented in this file.
 
-## v1.36.3
+## v1.36.5
+
+### Features
+
+- [GUI] Relationships tab improvements (#4631 by: HebaruSan)
+
+### Bugfixes
+
+- [Multiple] Fix installation of unrecognized imported ZIPs (#4628, #4636 by: HebaruSan)
+- [Multiple] Auto-size grid rows to ensure high-DPI visibility of checkboxes (#4630 by: HebaruSan)
+- [GUI] Replace NavigationHistory.IsReadOnly with same-value check (#4641 by: HebaruSan)
+- [GUI] Fix ckan://identifier (#4603 by: Halbann; reviewed: HebaruSan)
+- [Multiple] Don't close 416 responses on dotnet (#4646 by: HebaruSan)
+
+### Internal
+
+- [Netkan] Apply all subdocuments of internal .ckans (#4640 by: HebaruSan)
+- [Build] Sync certs from newer location in RPM package (#4642 by: HebaruSan)
+
+## v1.36.4
 
 ### Features
 
 - [Multiple] Translation updates (#4483 by: gongasss, vinix38; reviewed: HebaruSan)
 - [Multiple] Mark virtual dependencies as auto-installed (#4499 by: HebaruSan)
+- [Build] Don't leave launch shell waiting for CKAN to close on Linux (#4517 by: nuew; reviewed: HebaruSan)
+- [GUI] Sort Contents tab alphanumerically, folders first (#4529 by: HebaruSan)
+- [GUI] Auto-size new repo popup to fit rows in list (#4543 by: HebaruSan)
+- [GUI] DPI-based font scaling for Mono (#4566, #4617 by: HebaruSan)
+- [Core] Purge ZIPs corrupted after downloading (#4577 by: HebaruSan)
+- [Multiple] Translation updates from Crowdin (#4578, #4614 by: gongass_, Champ0999, Giuseppe499, ambition, Damian Gorol (GinoMoses), Polpolando; reviewed: HebaruSan)
+- [ConsoleUI] Game instance cloning for ConsoleUI (#4593 by: HebaruSan)
+- [GUI] Windows dark mode in .NET 10 build (#4594, #4610 by: HebaruSan)
+- [Multiple] Leave mod files alone for relationship-only metadata changes (#4599 by: HebaruSan)
+- [Multiple] Better free space check for single disk systems (#4604 by: HebaruSan)
+- [GUI] Add edit labels option to labels filter dropdown (#4616 by: HebaruSan)
 
 ### Bugfixes
 
@@ -16,19 +46,38 @@ All notable changes to this project will be documented in this file.
 - [GUI] Fix freezing after startup with empty mod list (#4491, #4492 by: HebaruSan)
 - [GUI] Remove dependencies from changeset when skipping a change (#4495 by: HebaruSan)
 - [Multiple] Allow newly installed versions to satisfy deps (#4496 by: HebaruSan)
+- [GUI] Download errors dialog improvements (#4502 by: HebaruSan)
+- [GUI] Fix symlinks being generated on Linux (#4519 by: HebaruSan)
+- [ConsoleUI] Only scroll ConsoleUI log messages for small popups (#4547 by: HebaruSan)
+- [Multiple] Exclude other versions of mods already in changeset from satisfying relationships (#4550 by: HebaruSan)
+- [Core] Properly recalculate compatible mods on stability tolerance change (#4552 by: HebaruSan)
+- [GUI] Don't copy Steam command lines into cloned instances (#4553 by: HebaruSan)
+- [GUI] Apply installed module constraints to changeset (#4555 by: HebaruSan)
+- [Core] Try to stop users from cloning instances into themselves (#4556 by: HebaruSan)
+- [Multiple] Fix missing conflicting recommendations (#4561 by: HebaruSan)
+- [Core] Fix item with the same key exception (#4569 by: HebaruSan)
+- [Core] Silently skip Steam libraries on missing drives (#4570 by: HebaruSan)
+- [ConsoleUI] Fit mod choice prompt to screen height in ConsoleUI (#4573 by: HebaruSan)
+- [Build] Remove symlink-based DLL deduplication from MacOS build (#4557 by: HebaruSan)
+- [Multiple] Layout and scaling related fixes (#4591 by: HebaruSan)
+- [Multiple] Non-Latin letter search (#4605 by: HebaruSan)
+- [Build] Automatically pull focus for the Terminal window on MacOS (#4606 by: cheesebellies; reviewed: HebaruSan)
+- [GUI] Resets Play Button state if the game launch is cancelled (#4607 by: neilsapno; reviewed: HebaruSan)
+- [GUI] Don't revert removals on providing mod choice (#4609 by: HebaruSan)
 
 ### Internal
 
 - [Docs] Update download count image for Minkowski² (#4474 by: Clayell; reviewed: HebaruSan)
 - [Netkan] Fix `x_netkan_epoch` not applied before unreliable server check (#4477 by: HebaruSan)
 - [Netkan] Gitea kref (#4494, #4498 by: HebaruSan)
+- [Build] Bump log4net from 2.0.15 to 3.3.0 (#4562 by: dependabot[bot])
 
 ## v1.36.2 (Politas)
 
 ### Features
 
 - [Multiple] Mod file deduplication across game instances (#4358, #4440, #4453, #4468 by: HebaruSan)
-- [Multiple] Translation updates from Crowdin (#4359, #4422, #4443 by: HebaruSan)
+- [Multiple] Translation updates from Crowdin (#4359, #4422, #4443 by: vinix38, ambition, 3meraldK; reviewed: HebaruSan)
 - [Multiple] Make global install filters and presets game-specific (#4361 by: HebaruSan)
 - [GUI] Add download count to Metadata Tab (#4363, #4368 by: averageksp; reviewed: HebaruSan)
 - [GUI] Calculate size of cached files per host (#4377 by: HebaruSan)

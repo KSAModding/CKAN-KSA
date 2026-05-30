@@ -24,6 +24,7 @@ namespace CKAN.GUI
         public EditModpack()
         {
             InitializeComponent();
+            RelationshipsListView.EnsureReadableGroupHeaders();
 
             ToolTip.SetToolTip(IdentifierTextBox,       Properties.Resources.EditModpackTooltipIdentifier);
             ToolTip.SetToolTip(NameTextBox,             Properties.Resources.EditModpackTooltipName);
@@ -40,6 +41,7 @@ namespace CKAN.GUI
             ToolTip.SetToolTip(IgnoreRadioButton,       Properties.Resources.EditModpackTooltipIgnore);
             ToolTip.SetToolTip(CancelExportButton,      Properties.Resources.EditModpackTooltipCancel);
             ToolTip.SetToolTip(ExportModpackButton,     Properties.Resources.EditModpackTooltipExport);
+            ToolTip.ScaleFonts();
         }
 
         [ForbidGUICalls]

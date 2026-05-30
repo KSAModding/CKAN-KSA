@@ -36,7 +36,7 @@ namespace CKAN.GUI
             this.Splitter = new CKAN.GUI.UsableSplitContainer();
             this.HistoryListView = new ThemedListView();
             this.TimestampColumn = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
-            this.ModsListView = new ThemedListView();
+            this.ModsListView = new CKAN.GUI.ThemedListView();
             this.NotInstalledGroup = new System.Windows.Forms.ListViewGroup();
             this.InstalledGroup = new System.Windows.Forms.ListViewGroup();
             this.NameColumn = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
@@ -69,7 +69,7 @@ namespace CKAN.GUI
             //
             // InstallButton
             //
-            //this.InstallButton.Image = global::CKAN.GUI.Properties.Resources.install;
+            this.InstallButton.Image = global::CKAN.GUI.EmbeddedImages.apply;
             this.InstallButton.ImageScaling = System.Windows.Forms.ToolStripItemImageScaling.None;
             this.InstallButton.Name = "InstallButton";
             this.InstallButton.Size = new System.Drawing.Size(114, 56);
@@ -83,7 +83,7 @@ namespace CKAN.GUI
             this.Splitter.FixedPanel = System.Windows.Forms.FixedPanel.Panel1;
             this.Splitter.IsSplitterFixed = true;
             this.Splitter.Location = new System.Drawing.Point(5, 70);
-            this.Splitter.Margin = new System.Windows.Forms.Padding(0,0,0,0);
+            this.Splitter.Margin = new System.Windows.Forms.Padding(0, 0, 0, 0);
             this.Splitter.Name = "Splitter";
             this.Splitter.Size = new System.Drawing.Size(490, 385);
             this.Splitter.SplitterDistance = 100;
@@ -208,8 +208,8 @@ namespace CKAN.GUI
             //
             // InstallationHistory
             //
-            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 14F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
             this.Controls.Add(this.Splitter);
             this.Controls.Add(this.Toolbar);
             this.Controls.Add(this.BottomButtonPanel);

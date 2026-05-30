@@ -18,6 +18,8 @@ namespace CKAN.GUI
         public EditLabelsDialog(IUser user, GameInstanceManager manager, ModuleLabelList labels)
         {
             InitializeComponent();
+            LabelSelectionTree.ScaleFonts();
+            this.ScaleFonts();
             this.user    = user;
             this.labels  = labels;
             InstanceNameComboBox.DataSource = new string[] { "" }
@@ -36,6 +38,7 @@ namespace CKAN.GUI
             ToolTip.SetToolTip(IgnoreMissingFilesCheckBox, Properties.Resources.EditLabelsToolTipIgnoreMissingFiles);
             ToolTip.SetToolTip(MoveUpButton, Properties.Resources.EditLabelsToolTipMoveUp);
             ToolTip.SetToolTip(MoveDownButton, Properties.Resources.EditLabelsToolTipMoveDown);
+            ToolTip.ScaleFonts();
         }
 
         private void LoadTree()

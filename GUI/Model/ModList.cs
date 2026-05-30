@@ -33,22 +33,22 @@ namespace CKAN.GUI
         /// <param name="instance">Game instance for getting labels</param>
         /// <param name="allLabels">All label definitions</param>
         /// <param name="allTags">All tag definitions</param>
-        /// <param name="coreConfig">Core configuration</param>
         /// <param name="guiConfig">GUI configuration</param>
+        /// <param name="graphics">Graphics object for calculating word wrap</param>
         /// <param name="mc">Changes the user has made</param>
         /// <returns>The mod list</returns>
         public ModList(IReadOnlyCollection<GUIMod> modules,
                        GameInstance                instance,
                        ModuleLabelList             allLabels,
                        ModuleTagList               allTags,
-                       IConfiguration              coreConfig,
                        GUIConfiguration            guiConfig,
+                       Graphics                    graphics,
                        List<ModChange>?            mc = null)
         {
             this.allLabels        = allLabels;
             this.allTags          = allTags;
-            this.coreConfig       = coreConfig;
             this.guiConfig        = guiConfig;
+            this.graphics         = graphics;
             activeSearches        = guiConfig.DefaultSearches
                                              ?.Select(s => ModSearch.Parse(allLabels, instance, s))
                                               .OfType<ModSearch>()
@@ -226,7 +226,16 @@ namespace CKAN.GUI
             var installSize   = new DataGridViewTextBoxCell { Value = mod.InstallSize             };
             var releaseDate   = new DataGridViewTextBoxCell { Value = mod.Module.release_date?.ToLocalTime() };
             var installDate   = new DataGridViewTextBoxCell { Value = mod.InstallDate             };
-            var desc          = new DataGridViewTextBoxCell { Value = ToGridText(mod.Abstract)    };
+            var desc          = new DataGridViewTextBoxCell
+                                {
+                                    Value       = ToGridText(mod.Abstract),
+                                    ToolTipText = mod.Description is { Length: > 0 }
+                                                      ? string.Join(Environment.NewLine,
+                                                                    graphics.WordWrap(mod.Description, 600)
+                                                                            .Prepend("")
+                                                                            .Prepend(mod.Abstract))
+                                                      : mod.Abstract,
+                                };
 
             item.Cells.AddRange(selecting, autoInstalled, updating, replacing, name, author, installVersion, latestVersion, compat, downloadSize, installSize, releaseDate, installDate, downloadCount, desc);
 
@@ -440,18 +449,28 @@ namespace CKAN.GUI
             => row.Tag is GUIMod gmod
                    ? gmod.GetModChanges(upgradeCol?.Visible == true
                                         && row.Cells[upgradeCol.Index] is DataGridViewCheckBoxCell upgradeCell
-                                        && (bool)upgradeCell.Value,
+                                        && upgradeCell.Value is true,
                                         replaceCol?.Visible == true
                                         && row.Cells[replaceCol.Index] is DataGridViewCheckBoxCell replaceCell
-                                        && (bool)replaceCell.Value,
-                                        registry.MetadataChanged(gmod.Identifier))
+                                        && replaceCell.Value is true,
+                                        registry.MetadataChanged(gmod.Identifier, out bool installedFilesChanged),
+                                        installedFilesChanged)
                    : Enumerable.Empty<ModChange>();
+
+        public static Tuple<ICollection<ModChange>, Dictionary<CkanModule, string>, List<string>> ComputeFullChangeSetFromUserChangeSet(
+            IRegistryQuerier         registry,
+            HashSet<ModChange>       changeSet,
+            IConfiguration           coreConfig,
+            GameInstance             instance)
+            => ComputeFullChangeSetFromUserChangeSet(registry, changeSet, coreConfig,
+                                                     instance.Game, instance.StabilityToleranceConfig, instance.VersionCriteria());
 
         /// <summary>
         /// Returns a changeset and conflicts based on the selections of the user.
         /// </summary>
         /// <param name="registry">The registry for getting available mods</param>
         /// <param name="changeSet">User's choices of installation and removal</param>
+        /// <param name="coreConfig">Core configuration</param>
         /// <param name="game">Game of the game instance</param>
         /// <param name="stabilityTolerance">Prerelease configuration</param>
         /// <param name="version">The version of the current game instance</param>
@@ -461,9 +480,10 @@ namespace CKAN.GUI
         /// 2. Mapping from conflicting mods to description of the conflict
         /// 3. Descriptions of all conflicts
         /// </returns>
-        public Tuple<ICollection<ModChange>, Dictionary<CkanModule, string>, List<string>> ComputeFullChangeSetFromUserChangeSet(
+        public static Tuple<ICollection<ModChange>, Dictionary<CkanModule, string>, List<string>> ComputeFullChangeSetFromUserChangeSet(
             IRegistryQuerier         registry,
             HashSet<ModChange>       changeSet,
+            IConfiguration           coreConfig,
             IGame                    game,
             StabilityToleranceConfig stabilityTolerance,
             GameVersionCriteria      version)
@@ -672,8 +692,8 @@ namespace CKAN.GUI
 
         private readonly ModuleLabelList                allLabels;
         private readonly ModuleTagList                  allTags;
-        private readonly IConfiguration                 coreConfig;
         private readonly GUIConfiguration               guiConfig;
+        private readonly Graphics                       graphics;
         private          IReadOnlyCollection<ModSearch> activeSearches;
 
         private static readonly Color conflictColor = Color.FromArgb(255, 64, 64);

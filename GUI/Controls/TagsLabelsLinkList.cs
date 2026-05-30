@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.Drawing;
+using System.ComponentModel;
 using System.Windows.Forms;
 #if NET5_0_OR_GREATER
 using System.Runtime.Versioning;
@@ -17,6 +18,12 @@ namespace CKAN.GUI
     #endif
     public partial class TagsLabelsLinkList : FlowLayoutPanel
     {
+        public TagsLabelsLinkList()
+            : base()
+        {
+            ToolTip.ScaleFonts();
+        }
+
         [ForbidGUICalls]
         public void UpdateTagsAndLabels(IEnumerable<ModuleTag>?   tags,
                                         IEnumerable<ModuleLabel>? labels)
@@ -47,6 +54,7 @@ namespace CKAN.GUI
             });
         }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string TagToolTipText
         {
             get => tagToolTip;
@@ -110,6 +118,10 @@ namespace CKAN.GUI
                         TagClicked?.Invoke(t, ModifierKeys.HasAnyFlag(Keys.Control, Keys.Shift));
                         break;
 
+                    case { Button: MouseButtons.Middle }:
+                        TagClicked?.Invoke(t, true);
+                        break;
+
                     case { Button: MouseButtons.Right }:
                         var showHideLink = new ToolStripMenuItem(string.Format(Properties.Resources.UtilShowHideLink,
                                                                                t.Name));
@@ -130,6 +142,9 @@ namespace CKAN.GUI
                     case { Button: MouseButtons.Left }:
                         LabelClicked?.Invoke(l, ModifierKeys.HasAnyFlag(Keys.Control, Keys.Shift));
                         break;
+                    case { Button: MouseButtons.Middle }:
+                        LabelClicked?.Invoke(l, true);
+                        break;
                     case { Button: MouseButtons.Right }:
                         var addRemoveLink = new ToolStripMenuItem(string.Format(Properties.Resources.UtilAddRemoveModuleLink,
                                                                                 l.Name));
@@ -143,12 +158,12 @@ namespace CKAN.GUI
         private static void OpenLinkLabelContextMenu(LinkLabel                  label,
                                                      params ToolStripMenuItem[] options)
         {
-            var menu = new ContextMenuStrip();
-            if (Platform.IsMono)
+            var menu = new ContextMenuStrip
             {
-                menu.Renderer = new FlatToolStripRenderer();
-            }
+                Renderer = new FlatToolStripRenderer(),
+            };
             menu.Items.AddRange(options);
+            menu.ScaleFonts();
             menu.Show(label.PointToScreen(new Point(0, label.Height)));
         }
 

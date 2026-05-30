@@ -48,10 +48,18 @@ namespace CKAN.GUI
             {
                 var ident = first.name;
                 if (!string.IsNullOrEmpty(ident)
-                    && ManageMods.mainModList != null
-                    && ManageMods.mainModList.full_list_of_mod_rows.TryGetValue(ident, out DataGridViewRow? row))
+                    && ManageMods.MainModList != null
+                    && ManageMods.MainModList.full_list_of_mod_rows.TryGetValue(ident, out DataGridViewRow? row))
                 {
                     ActiveModInfo = row.Tag as GUIMod;
+                }
+                else if (CurrentInstance != null)
+                {
+                    var registry = RegistryManager.Instance(CurrentInstance, repoData).registry;
+                    ShowSelectionModInfo(Utilities.DefaultIfThrows(() =>
+                        registry.LatestAvailable(ident,
+                                                 CurrentInstance.StabilityToleranceConfig,
+                                                 CurrentInstance.VersionCriteria())));
                 }
                 else
                 {

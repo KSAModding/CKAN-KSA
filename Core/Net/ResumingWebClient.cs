@@ -17,6 +17,11 @@ namespace CKAN
 {
     public class ResumingWebClient : WebClient
     {
+        public ResumingWebClient()
+        {
+            Encoding = System.Text.Encoding.UTF8;
+        }
+
         /// <summary>
         /// A version of DownloadFileAsync that appends to its destination
         /// file if it already exists and skips downloading the bytes
@@ -119,13 +124,21 @@ namespace CKAN
                 return response;
             }
             catch (WebException wexc)
-            when (wexc.Status == WebExceptionStatus.ProtocolError
-                  && wexc.Response is HttpWebResponse response
-                  && response.StatusCode == HttpStatusCode.RequestedRangeNotSatisfiable)
+            when (wexc is
+                  {
+                      Status:   WebExceptionStatus.ProtocolError,
+                      Response: HttpWebResponse
+                                {
+                                    StatusCode: HttpStatusCode.RequestedRangeNotSatisfiable,
+                                }
+                                response,
+                  })
             {
                 log.DebugFormat("GetWebResponse failed with range error, closing stream for {0}", request.RequestUri);
-                // Don't save the error page into a file
+                #if NETFRAMEWORK
+                // Don't save the error page into a file (confuses WebClient on dotnet)
                 response.Close();
+                #endif
                 return response;
             }
         }

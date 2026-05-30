@@ -29,6 +29,10 @@ namespace CKAN.GUI
         public Versions()
         {
             InitializeComponent();
+            InstalledLabel.ScaleFonts();
+            PrereleaseLabel.ScaleFonts();
+            CompatibleLabel.NormalizeForeColor();
+            PrereleaseLabel.NormalizeForeColor();
             repoData = ServiceLocator.Container.Resolve<RepositoryDataManager>();
         }
 
@@ -41,6 +45,7 @@ namespace CKAN.GUI
             VersionsListView.EndUpdate();
         }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public GUIMod? SelectedModule
         {
             set
@@ -227,7 +232,7 @@ namespace CKAN.GUI
                     };
                     if (installedVersion != null && installedVersion.Equals(module.version))
                     {
-                        toRet.Font = new Font(toRet.Font,
+                        toRet.Font = new Font(VersionsListView.Font,
                                               module.release_status <= stabilityTolerance
                                                   ? InstalledLabel.Font.Style
                                                   : InstalledLabel.Font.Style
@@ -235,11 +240,12 @@ namespace CKAN.GUI
                     }
                     else if (module.release_status > stabilityTolerance)
                     {
-                        toRet.Font = new Font(toRet.Font, PrereleaseLabel.Font.Style);
+                        toRet.Font = new Font(VersionsListView.Font, PrereleaseLabel.Font.Style);
                     }
                     if (module.release_status > stabilityTolerance)
                     {
                         toRet.BackColor = PrereleaseLabel.BackColor;
+                        toRet.ForeColor = PrereleaseLabel.ForeColor;
                     }
                     if (module.Equals(gmod.SelectedMod) && interactive)
                     {
@@ -297,6 +303,7 @@ namespace CKAN.GUI
                                else
                                {
                                    item.BackColor = CompatibleLabel.BackColor;
+                                   item.ForeColor = CompatibleLabel.ForeColor;
                                }
                            }));
                 Util.Invoke(this, () => UseWaitCursor = false);

@@ -13,7 +13,14 @@ namespace CKAN.GUI
         public AboutDialog()
         {
             InitializeComponent();
+            projectNameLabel.ScaleFonts();
+            this.ScaleFonts();
             ApplyFormCompatibilityFixes();
+            licenseLinkLabel.LinkColor     = BackColor.LinkColorForBackColor();
+            authorsLinkLabel.LinkColor     = BackColor.LinkColorForBackColor();
+            sourceLinkLabel.LinkColor      = BackColor.LinkColorForBackColor();
+            forumthreadLinkLabel.LinkColor = BackColor.LinkColorForBackColor();
+            homepageLinkLabel.LinkColor    = BackColor.LinkColorForBackColor();
             versionLabel.Text = string.Format(Properties.Resources.AboutDialogLabel2Text, Meta.GetVersion());
         }
 

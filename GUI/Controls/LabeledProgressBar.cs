@@ -22,7 +22,6 @@ namespace CKAN.GUI
             SetStyle(ControlStyles.OptimizedDoubleBuffer
                      | ControlStyles.UserPaint,
                      true);
-            Font = SystemFonts.DefaultFont;
             Text = "";
         }
 
@@ -60,7 +59,9 @@ namespace CKAN.GUI
 
         protected override void OnPaint(PaintEventArgs e)
         {
-            if (ProgressBarRenderer.IsSupported)
+            if (ProgressBarRenderer.IsSupported
+                // ProgressBarRenderer draws the wrong background color in net10's dark mode
+                && !Util.DarkMode)
             {
                 ProgressBarRenderer.DrawHorizontalBar(e.Graphics, ClientRectangle);
                 ProgressBarRenderer.DrawHorizontalChunks(e.Graphics,

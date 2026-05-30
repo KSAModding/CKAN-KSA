@@ -58,20 +58,16 @@ namespace CKAN.GUI
             this.GameCommandlineToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.compatibleGameVersionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.helpToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.gameDiscordToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.modSupportToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.HelpToolStripSeparator = new System.Windows.Forms.ToolStripSeparator();
             this.userGuideToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.discordToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.modSupportToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.reportClientIssueToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.reportMetadataIssueToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.aboutToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.statusStrip1 = new System.Windows.Forms.StatusStrip();
             this.splitContainer1 = new CKAN.GUI.UsableSplitContainer();
-            this.LabelsContextMenuStrip = new System.Windows.Forms.ContextMenuStrip(this.components);
-            this.modListToolStripSeparator = new System.Windows.Forms.ToolStripSeparator();
-            this.tagFilterToolStripSeparator = new System.Windows.Forms.ToolStripSeparator();
-            this.untaggedFilterToolStripSeparator = new System.Windows.Forms.ToolStripSeparator();
-            this.labelToolStripSeparator = new System.Windows.Forms.ToolStripSeparator();
-            this.editLabelsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.ModInfo = new CKAN.GUI.ModInfo();
             this.StatusLabel = new System.Windows.Forms.ToolStripStatusLabel();
             this.StatusInstanceLabel = new System.Windows.Forms.ToolStripStatusLabel();
@@ -352,15 +348,31 @@ namespace CKAN.GUI
             // helpToolStripMenuItem
             //
             this.helpToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.gameDiscordToolStripMenuItem,
+            this.modSupportToolStripMenuItem,
+            this.HelpToolStripSeparator,
             this.userGuideToolStripMenuItem,
             this.discordToolStripMenuItem,
-            this.modSupportToolStripMenuItem,
             this.reportClientIssueToolStripMenuItem,
             this.reportMetadataIssueToolStripMenuItem,
             this.aboutToolStripMenuItem});
             this.helpToolStripMenuItem.Name = "helpToolStripMenuItem";
             this.helpToolStripMenuItem.Size = new System.Drawing.Size(61, 29);
             resources.ApplyResources(this.helpToolStripMenuItem, "helpToolStripMenuItem");
+            //
+            // gameDiscordToolStripMenuItem
+            //
+            this.gameDiscordToolStripMenuItem.Name = "gameDiscordToolStripMenuItem";
+            this.gameDiscordToolStripMenuItem.Size = new System.Drawing.Size(230, 30);
+            this.gameDiscordToolStripMenuItem.Click += new System.EventHandler(this.gameDiscordToolStripMenuItem_Click);
+            resources.ApplyResources(this.gameDiscordToolStripMenuItem, "gameDiscordToolStripMenuItem");
+            //
+            // modSupportToolStripMenuItem
+            //
+            this.modSupportToolStripMenuItem.Name = "modSupportToolStripMenuItem";
+            this.modSupportToolStripMenuItem.Size = new System.Drawing.Size(230, 30);
+            this.modSupportToolStripMenuItem.Click += new System.EventHandler(this.modSupportToolStripMenuItem_Click);
+            resources.ApplyResources(this.modSupportToolStripMenuItem, "modSupportToolStripMenuItem");
             //
             // userGuideToolStripMenuItem
             //
@@ -375,13 +387,6 @@ namespace CKAN.GUI
             this.discordToolStripMenuItem.Size = new System.Drawing.Size(230, 30);
             this.discordToolStripMenuItem.Click += new System.EventHandler(this.discordToolStripMenuItem_Click);
             resources.ApplyResources(this.discordToolStripMenuItem, "discordToolStripMenuItem");
-            //
-            // modSupportToolStripMenuItem
-            //
-            this.modSupportToolStripMenuItem.Name = "modSupportToolStripMenuItem";
-            this.modSupportToolStripMenuItem.Size = new System.Drawing.Size(230, 30);
-            this.modSupportToolStripMenuItem.Click += new System.EventHandler(this.modSupportToolStripMenuItem_Click);
-            resources.ApplyResources(this.modSupportToolStripMenuItem, "modSupportToolStripMenuItem");
             //
             // reportClientIssueToolStripMenuItem
             //
@@ -489,7 +494,6 @@ namespace CKAN.GUI
             //
             // MainTabControl
             //
-            this.MainTabControl.BackColor = System.Drawing.SystemColors.Control;
             this.MainTabControl.Controls.Add(this.ManageModsTabPage);
             this.MainTabControl.Controls.Add(this.ChangesetTabPage);
             this.MainTabControl.Controls.Add(this.WaitTabPage);
@@ -512,7 +516,6 @@ namespace CKAN.GUI
             //
             // ManageModsTabPage
             //
-            this.ManageModsTabPage.BackColor = System.Drawing.SystemColors.Control;
             this.ManageModsTabPage.Controls.Add(this.ManageMods);
             this.ManageModsTabPage.Location = new System.Drawing.Point(4, 29);
             this.ManageModsTabPage.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
@@ -542,10 +545,10 @@ namespace CKAN.GUI
             this.ManageMods.ClearStatusBar += this.ManageMods_ClearStatusBar;
             this.ManageMods.LaunchGame += this.LaunchGame;
             this.ManageMods.EditCommandLines += this.EditCommandLines;
+            this.ManageMods.DownloadModules += this.StartDownloads;
             //
             // ChangesetTabPage
             //
-            this.ChangesetTabPage.BackColor = System.Drawing.SystemColors.Control;
             this.ChangesetTabPage.Controls.Add(this.Changeset);
             this.ChangesetTabPage.Location = new System.Drawing.Point(4, 29);
             this.ChangesetTabPage.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
@@ -571,7 +574,6 @@ namespace CKAN.GUI
             //
             // WaitTabPage
             //
-            this.WaitTabPage.BackColor = System.Drawing.SystemColors.Control;
             this.WaitTabPage.Controls.Add(this.Wait);
             this.WaitTabPage.Location = new System.Drawing.Point(4, 29);
             this.WaitTabPage.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
@@ -595,7 +597,6 @@ namespace CKAN.GUI
             //
             // ChooseRecommendedModsTabPage
             //
-            this.ChooseRecommendedModsTabPage.BackColor = System.Drawing.SystemColors.Control;
             this.ChooseRecommendedModsTabPage.Controls.Add(this.ChooseRecommendedMods);
             this.ChooseRecommendedModsTabPage.Location = new System.Drawing.Point(4, 29);
             this.ChooseRecommendedModsTabPage.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
@@ -619,7 +620,6 @@ namespace CKAN.GUI
             //
             // PlayTimeTabPage
             //
-            this.PlayTimeTabPage.BackColor = System.Drawing.SystemColors.Control;
             this.PlayTimeTabPage.Controls.Add(this.PlayTime);
             this.PlayTimeTabPage.Location = new System.Drawing.Point(4, 29);
             this.PlayTimeTabPage.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
@@ -642,7 +642,6 @@ namespace CKAN.GUI
             //
             // UnmanagedFilesTabPage
             //
-            this.UnmanagedFilesTabPage.BackColor = System.Drawing.SystemColors.Control;
             this.UnmanagedFilesTabPage.Controls.Add(this.UnmanagedFiles);
             this.UnmanagedFilesTabPage.Location = new System.Drawing.Point(4, 29);
             this.UnmanagedFilesTabPage.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
@@ -665,7 +664,6 @@ namespace CKAN.GUI
             //
             // InstallationHistoryTabPage
             //
-            this.InstallationHistoryTabPage.BackColor = System.Drawing.SystemColors.Control;
             this.InstallationHistoryTabPage.Controls.Add(this.InstallationHistory);
             this.InstallationHistoryTabPage.Location = new System.Drawing.Point(4, 29);
             this.InstallationHistoryTabPage.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
@@ -690,7 +688,6 @@ namespace CKAN.GUI
             //
             // ChooseProvidedModsTabPage
             //
-            this.ChooseProvidedModsTabPage.BackColor = System.Drawing.SystemColors.Control;
             this.ChooseProvidedModsTabPage.Controls.Add(this.ChooseProvidedMods);
             this.ChooseProvidedModsTabPage.Location = new System.Drawing.Point(4, 29);
             this.ChooseProvidedModsTabPage.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
@@ -713,7 +710,6 @@ namespace CKAN.GUI
             //
             // DeleteDirectoriesTabPage
             //
-            this.DeleteDirectoriesTabPage.BackColor = System.Drawing.SystemColors.Control;
             this.DeleteDirectoriesTabPage.Controls.Add(this.DeleteDirectories);
             this.DeleteDirectoriesTabPage.Location = new System.Drawing.Point(0, 0);
             this.DeleteDirectoriesTabPage.Margin = new System.Windows.Forms.Padding(0, 0, 0, 0);
@@ -735,7 +731,6 @@ namespace CKAN.GUI
             //
             // EditModpackTabPage
             //
-            this.EditModpackTabPage.BackColor = System.Drawing.SystemColors.Control;
             this.EditModpackTabPage.Controls.Add(this.EditModpack);
             this.EditModpackTabPage.Location = new System.Drawing.Point(0, 0);
             this.EditModpackTabPage.Margin = new System.Windows.Forms.Padding(0, 0, 0, 0);
@@ -758,7 +753,6 @@ namespace CKAN.GUI
             //
             // DownloadStatisticsTabPage
             //
-            this.DownloadStatisticsTabPage.BackColor = System.Drawing.SystemColors.Control;
             this.DownloadStatisticsTabPage.Controls.Add(this.DownloadStatistics);
             this.DownloadStatisticsTabPage.Controls.Add(this.DownloadStatisticsButtonPanel);
             this.DownloadStatisticsTabPage.Location = new System.Drawing.Point(0, 0);
@@ -899,8 +893,8 @@ namespace CKAN.GUI
             //
             // Main
             //
-            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 16F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
             this.ClientSize = new System.Drawing.Size(1544, 1038);
             this.Controls.Add(this.splitContainer1);
             this.Controls.Add(this.statusStrip1);
@@ -989,20 +983,16 @@ namespace CKAN.GUI
         private System.Windows.Forms.ToolStripMenuItem GameCommandlineToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem compatibleGameVersionsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem helpToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem gameDiscordToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem modSupportToolStripMenuItem;
+        private System.Windows.Forms.ToolStripSeparator HelpToolStripSeparator;
         private System.Windows.Forms.ToolStripMenuItem userGuideToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem discordToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem modSupportToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem reportClientIssueToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem reportMetadataIssueToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem aboutToolStripMenuItem;
         private System.Windows.Forms.StatusStrip statusStrip1;
         private CKAN.GUI.UsableSplitContainer splitContainer1;
-        private System.Windows.Forms.ToolStripSeparator modListToolStripSeparator;
-        private System.Windows.Forms.ToolStripSeparator tagFilterToolStripSeparator;
-        private System.Windows.Forms.ToolStripSeparator untaggedFilterToolStripSeparator;
-        private System.Windows.Forms.ContextMenuStrip LabelsContextMenuStrip;
-        private System.Windows.Forms.ToolStripSeparator labelToolStripSeparator;
-        private System.Windows.Forms.ToolStripMenuItem editLabelsToolStripMenuItem;
         private CKAN.GUI.ModInfo ModInfo;
         private System.Windows.Forms.ToolStripStatusLabel StatusLabel;
         private System.Windows.Forms.ToolStripStatusLabel StatusInstanceLabel;

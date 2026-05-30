@@ -95,18 +95,18 @@ namespace CKAN.GUI
             //
             // WarningLabel
             //
-            this.WarningLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.WarningLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
             this.WarningLabel.ForeColor = System.Drawing.Color.Red;
             this.WarningLabel.Location = new System.Drawing.Point(9, 354);
             this.WarningLabel.Name = "WarningLabel";
-            this.WarningLabel.Size = new System.Drawing.Size(360, 32);
+            this.WarningLabel.Size = new System.Drawing.Size(360, 40);
             this.WarningLabel.TabIndex = 5;
             resources.ApplyResources(this.WarningLabel, "WarningLabel");
             //
             // InstallFiltersDialog
             //
-            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 13F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
             this.ClientSize = new System.Drawing.Size(379, 390);
             this.Controls.Add(this.GlobalFiltersGroupBox);
             this.Controls.Add(this.InstanceFiltersGroupBox);
@@ -120,7 +120,6 @@ namespace CKAN.GUI
             this.Name = "InstallFiltersDialog";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
             this.Load += new System.EventHandler(this.InstallFiltersDialog_Load);
-            this.Closing += new System.ComponentModel.CancelEventHandler(this.InstallFiltersDialog_Closing);
             resources.ApplyResources(this, "$this");
             this.GlobalFiltersGroupBox.ResumeLayout(false);
             this.InstanceFiltersGroupBox.ResumeLayout(false);

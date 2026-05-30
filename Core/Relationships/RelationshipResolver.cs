@@ -93,6 +93,7 @@ namespace CKAN
                 // Need to check against installed mods and those to install.
                 var conflictingModules = modlist.Values
                                                 .Concat(installed_modules)
+                                                .Distinct()
                                                 .Where(listed_mod => listed_mod.ConflictsWith(module));
                 foreach (CkanModule listed_mod in conflictingModules)
                 {
@@ -125,7 +126,8 @@ namespace CKAN
             try
             {
                 // Check that our solution is actually sane
-                SanityChecker.EnforceConsistency(modlist.Values.Concat(installed_modules),
+                SanityChecker.EnforceConsistency(modlist.Values.Concat(installed_modules)
+                                                               .Distinct(),
                                                  dlls,
                                                  registry.InstalledDlc);
             }
@@ -224,7 +226,7 @@ namespace CKAN
 
                 // If we already have this dependency covered,
                 // resolve its relationships if we haven't already
-                if (descriptor.MatchesAny(modlist.Values, null, null,
+                if (descriptor.MatchesAny(modlist.Values.Distinct().ToArray(), null, null,
                                           out CkanModule? installingCandidate)
                     && installingCandidate != null)
                 {
@@ -282,8 +284,9 @@ namespace CKAN
                 try
                 {
                     candidates = resolved.Candidates(descriptor,
-                                                     modlist.Values.Except(user_requested_mods)
-                                                                   .ToArray(),
+                                                     options.get_recommenders
+                                                         ? Dependencies().ToArray()
+                                                         : modlist.Values.Distinct().ToArray(),
                                                      registry, game);
                     log.DebugFormat("Got {0} candidates for {1}",
                                     candidates.Count, descriptor);
@@ -340,13 +343,23 @@ namespace CKAN
                 // Finally, check our candidate against everything which might object
                 // to it being installed; that's all the mods which are fixed in our
                 // list thus far, as well as everything on the system.
-                var fixed_mods = modlist.Values.Concat(installed_modules).ToHashSet();
+                var fixed_mods = (options.get_recommenders ? Dependencies()
+                                                           : modlist.Values)
+                                     .Concat(installed_modules)
+                                     .Distinct()
+                                     .ToHashSet();
 
                 var conflicting_mod = fixed_mods.FirstOrDefault(mod => mod.ConflictsWith(candidate));
                 if (conflicting_mod == null)
                 {
                     // Okay, looks like we want this one. Adding.
-                    Add(candidate, reason);
+                    Add(candidate,
+                        descriptor is ModuleRelationshipDescriptor rel
+                        && rel.name != candidate.identifier
+                        && reason is SelectionReason.Depends depRsn
+                               ? new SelectionReason.VirtualDepends(depRsn.Parent,
+                                                                    descriptor.ToString() ?? "")
+                               : reason);
                     Resolve(candidate, options, stanza);
                 }
                 else if (options.proceed_with_inconsistencies)
@@ -394,7 +407,7 @@ namespace CKAN
                 if (possibleDup.identifier == module.identifier)
                 {
                     if (possibleDup.version == module.version
-                        && !possibleDup.MetadataEquals(module))
+                        && !possibleDup.MetadataEquals(module, out _))
                     {
                         // If the version is the same and the metadata changed,
                         // queue this up as a reinstall (remove the old version)
@@ -404,8 +417,9 @@ namespace CKAN
                     else
                     {
                         // We should never add the same module twice!
-                        log.ErrorFormat("Assertion failed: Adding {0} twice in relationship resolution", module.identifier);
-                        throw new ArgumentException("Already contains module: " + module.identifier);
+                        log.ErrorFormat("Assertion failed: Already added {0}, can't add {1} ({2})",
+                                        possibleDup, module, reason);
+                        throw new ArgumentException($"Already added {possibleDup}, can't add {module} ({reason})");
                     }
                 }
                 else

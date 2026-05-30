@@ -60,6 +60,27 @@ namespace Tests.Core.Registry
         }
 
         [Test]
+        public void LatestAvailableWithProvides_SameIdentifierInMultipleRepos_SinglePerIdentifier()
+        {
+            // Arrange
+            var user = new NullUser();
+            using (var repo1 = new TemporaryRepository(TestData.kOS_014()))
+            using (var repo2 = new TemporaryRepository(TestData.kOS_014_epoch()))
+            using (var repoData = new TemporaryRepositoryData(user, repo1.repo, repo2.repo))
+            {
+                repo2.repo.name = "temp2";
+                var registry = new CKAN.Registry(repoData.Manager, repo1.repo, repo2.repo);
+
+                // Act
+                var found = registry.LatestAvailableWithProvides("kOS", stabilityTolerance, null);
+
+                // Assert
+                CollectionAssert.AreEquivalent(new CkanModule[] { TestData.kOS_014_epoch_module() },
+                                               found);
+            }
+        }
+
+        [Test]
         public void CompatibleModules_NoDLCInstalled_ExcludesModulesDependingOnMH()
         {
             // Arrange
@@ -262,6 +283,26 @@ namespace Tests.Core.Registry
                 Assert.IsFalse(compat.Contains(modFor161));
                 Assert.IsTrue(compat.Contains(modFor173));
                 Assert.IsFalse(compat.Contains(modFor181));
+            }
+        }
+
+        [Test]
+        public void ReregisterModule_WithInstalledModule_Works()
+        {
+            // Arrange
+            var repo = new Repository("test", "https://github.com/");
+            using (var inst   = new DisposableKSP(TestData.TestRegistry()))
+            using (var regMgr = RegistryManager.Instance(inst.KSP, new RepositoryDataManager(),
+                                                         new Repository[] { repo }))
+            {
+                var registry = regMgr.registry;
+                Assert.IsNull(registry.InstalledModule("DogeCoinFlag")?.Module.install?[0].find);
+
+                // Act
+                registry.ReregisterModule(inst.KSP, TestData.DogeCoinFlag_101_module_find());
+
+                // Assert
+                Assert.AreEqual("DogeCoinFlag", registry.InstalledModule("DogeCoinFlag")?.Module.install?[0].find);
             }
         }
 

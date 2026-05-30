@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using System.Drawing;
 using System.Windows.Forms;
 #if NET5_0_OR_GREATER
@@ -25,6 +26,7 @@ namespace CKAN.GUI
             InitializeComponent();
 
             ToolTip.SetToolTip(ExpandButton, Properties.Resources.EditModSearchTooltipExpandButton);
+            ToolTip.ScaleFonts();
 
             // TextBox resizes unpredictably at runtime, so we need special logic
             // to line up the button with it
@@ -69,6 +71,7 @@ namespace CKAN.GUI
 
         public event Action<string>? ShowError;
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public ModSearch? Search
         {
             get => currentSearch;
@@ -80,6 +83,7 @@ namespace CKAN.GUI
             }
         }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool ShowLabel
         {
             set

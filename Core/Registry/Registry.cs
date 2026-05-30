@@ -213,7 +213,8 @@ namespace CKAN
             {
                 // We need case insensitive path matching on Windows
                 // (already done when replacing this object in the above block, hence the 'else')
-                installed_files = new Dictionary<string, string>(installed_files, Platform.PathComparer);
+                installed_files = installed_files.DistinctBy(kvp => kvp.Key, Platform.PathComparer)
+                                                 .ToDictionary(Platform.PathComparer);
             }
 
             // Fix control lock, which previously was indexed with an invalid identifier.
@@ -636,13 +637,9 @@ namespace CKAN
         /// <see cref="IRegistryQuerier.CompatibleModules"/>
         /// </summary>
         public IEnumerable<CkanModule> CompatibleModules(StabilityToleranceConfig stabilityTolerance,
-                                                         GameVersionCriteria?     crit)
+                                                         GameVersionCriteria      crit)
             // Set up our compatibility partition
-            => crit != null ? SetCompatibleVersion(stabilityTolerance, crit).LatestCompatible
-                            : repoDataMgr?.GetAllAvailableModules(Repositories.Values)
-                                          .Select(am => am.Latest(stabilityTolerance))
-                                          .OfType<CkanModule>()
-                                         ?? Enumerable.Empty<CkanModule>();
+            => SetCompatibleVersion(stabilityTolerance, crit).LatestCompatible;
 
         /// <summary>
         /// <see cref="IRegistryQuerier.IncompatibleModules"/>
@@ -691,8 +688,7 @@ namespace CKAN
             => getAvail(identifier).Select(am => am.Latest(stabilityTolerance, gameVersion, relationshipDescriptor,
                                                            installed, toInstall))
                                    .OfType<CkanModule>()
-                                   .OrderByDescending(m => m.version)
-                                   .FirstOrDefault();
+                                   .MaxBy(m => m.version);
 
         /// <summary>
         /// Find modules with a given identifier
@@ -833,10 +829,13 @@ namespace CKAN
                     ? provs.Select(am => am.Latest(stabilityTolerance, gameVersion, relationship, installed, toInstall))
                            .OfType<CkanModule>()
                            .Where(m => m.ProvidesList.Contains(identifier))
-                           .Distinct()
+                           .GroupBy(m => m.identifier)
+                           .Select(grp => grp.MaxBy(m => m.version))
+                           .OfType<CkanModule>()
                            // Put the most popular one on top
                            .OrderByDescending(m => repoDataMgr?.GetDownloadCount(Repositories.Values, m.identifier)
                                                               ?? 0)
+                           .ThenBy(m => m.name)
                     // Nothing provides this
                     : Enumerable.Empty<CkanModule>())
                .ToList();
@@ -952,6 +951,18 @@ namespace CKAN
 
             // Installing and uninstalling mods can change compatibility due to conflicts,
             // so we'll need to reset the compatibility sorter
+            InvalidateInstalledCaches();
+        }
+
+        public void ReregisterModule(GameInstance inst, CkanModule module)
+        {
+            EnlistWithTransaction();
+            sorter = null;
+            if (installed_modules.TryGetValue(module.identifier, out InstalledModule? instMod))
+            {
+                installed_modules[module.identifier] = new InstalledModule(inst, module,
+                                                                           instMod.Files, instMod.AutoInstalled);
+            }
             InvalidateInstalledCaches();
         }
 

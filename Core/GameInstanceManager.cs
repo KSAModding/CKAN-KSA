@@ -243,15 +243,13 @@ namespace CKAN
         /// <exception cref="DirectoryNotFoundKraken">Thrown by CopyDirectory() if directory doesn't exist. Should never be thrown here.</exception>
         /// <exception cref="PathErrorKraken">Thrown by CopyDirectory() if the target folder already exists and is not empty.</exception>
         /// <exception cref="IOException">Thrown by CopyDirectory() if something goes wrong during the process.</exception>
-        public void CloneInstance(GameInstance existingInstance,
-                                  string       newName,
-                                  string       newPath,
-                                  bool         shareStockFolders = false)
-        {
-            CloneInstance(existingInstance, newName, newPath,
-                          existingInstance.Game.LeaveEmptyInClones,
-                          shareStockFolders);
-        }
+        public GameInstance CloneInstance(GameInstance existingInstance,
+                                          string       newName,
+                                          string       newPath,
+                                          bool         shareStockFolders = false)
+            => CloneInstance(existingInstance, newName, newPath,
+                             existingInstance.Game.LeaveEmptyInClones,
+                             shareStockFolders);
 
         /// <summary>
         /// Clones an existing game installation.
@@ -266,11 +264,11 @@ namespace CKAN
         /// <exception cref="DirectoryNotFoundKraken">Thrown by CopyDirectory() if directory doesn't exist. Should never be thrown here.</exception>
         /// <exception cref="PathErrorKraken">Thrown by CopyDirectory() if the target folder already exists and is not empty.</exception>
         /// <exception cref="IOException">Thrown by CopyDirectory() if something goes wrong during the process.</exception>
-        public void CloneInstance(GameInstance existingInstance,
-                                  string       newName,
-                                  string       newPath,
-                                  string[]     leaveEmpty,
-                                  bool         shareStockFolders = false)
+        public GameInstance CloneInstance(GameInstance existingInstance,
+                                          string       newName,
+                                          string       newPath,
+                                          string[]     leaveEmpty,
+                                          bool         shareStockFolders = false)
         {
             if (HasInstance(newName))
             {
@@ -297,14 +295,14 @@ namespace CKAN
 
             log.Debug("Copying directory.");
             Utilities.CopyDirectory(existingInstance.GameDir, newPath,
-                                    new string[] { "CKAN/registry.locked", "CKAN/playtime.json" },
+                                    new string[] { "CKAN/registry.locked", "CKAN/playtime.json", "CKAN/GUIConfig.json" },
                                     shareStockFolders ? existingInstance.Game.StockFolders
                                                       : Array.Empty<string>(),
                                     leaveEmpty,
                                     new string[] { "CKAN" });
 
             // Add the new instance to the config
-            AddInstance(new GameInstance(existingInstance.Game, newPath, newName, User));
+            return AddInstance(new GameInstance(existingInstance.Game, newPath, newName, User));
         }
 
         /// <summary>
@@ -347,9 +345,8 @@ namespace CKAN
 
                 foreach (var anchor in game.InstanceAnchorFiles)
                 {
-                    txFileMgr.WriteAllText(Path.Combine(newPath, anchor),
-                                           version.WithoutBuild.ToString(),
-                                           Encoding.UTF8);
+                    txFileMgr.WriteAllBytes(Path.Combine(newPath, anchor),
+                                            Encoding.UTF8.GetBytes(version.WithoutBuild.ToString() ?? ""));
                 }
 
                 // Don't write the buildID.txts if we have no build, otherwise it would be -1.
@@ -357,17 +354,15 @@ namespace CKAN
                 {
                     foreach (var b in KspBuildIdVersionProvider.buildIDfilenames)
                     {
-                        txFileMgr.WriteAllText(Path.Combine(newPath, b),
-                                               string.Format("build id = {0}", version.Build),
-                                               Encoding.UTF8);
+                        txFileMgr.WriteAllBytes(Path.Combine(newPath, b),
+                                                Encoding.UTF8.GetBytes(string.Format("build id = {0}", version.Build)));
                     }
                 }
 
                 // Create the readme.txt WITHOUT build number
-                txFileMgr.WriteAllText(Path.Combine(newPath, "readme.txt"),
-                                       string.Format("Version {0}",
-                                                     version.WithoutBuild.ToString()),
-                                       Encoding.UTF8);
+                txFileMgr.WriteAllBytes(Path.Combine(newPath, "readme.txt"),
+                                        Encoding.UTF8.GetBytes(string.Format("Version {0}",
+                                                     version.WithoutBuild.ToString())));
 
                 // Create the needed folder structure and the readme.txt for DLCs that should be simulated.
                 if (dlcs != null)
@@ -386,10 +381,9 @@ namespace CKAN
 
                         string dlcDir = Path.Combine(newPath, dlcDetector.InstallPath());
                         txFileMgr.CreateDirectory(dlcDir);
-                        txFileMgr.WriteAllText(
+                        txFileMgr.WriteAllBytes(
                             Path.Combine(dlcDir, "readme.txt"),
-                            string.Format("Version {0}", dlcVersion),
-                            Encoding.UTF8);
+                            Encoding.UTF8.GetBytes(string.Format("Version {0}", dlcVersion)));
                     }
                 }
 

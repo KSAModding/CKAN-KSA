@@ -23,7 +23,8 @@ namespace CKAN.GUI
         private CkanModule       Mod                 { get; set; }
         public  CkanModule?      LatestCompatibleMod { get; private set; }
         public  CkanModule?      LatestAvailableMod  { get; private set; }
-        public  InstalledModule? InstalledMod        { get; private set; }
+        public  InstalledModule? InstalledMod => registry.InstalledModule(Identifier);
+        private readonly IRegistryQuerier registry;
 
         /// <summary>
         /// The module of the checkbox that is checked in the MainAllModVersions list if any,
@@ -146,7 +147,7 @@ namespace CKAN.GUI
                    incompatible, hideEpochs, hideV)
         {
             IsInstalled      = true;
-            InstalledMod     = instMod;
+            this.registry    = registry;
             selectedMod      = registry.GetModuleByVersion(instMod.identifier, instMod.Module.version)
                                ?? instMod.Module;
             InstallDate      = instMod.InstallTime;
@@ -183,6 +184,7 @@ namespace CKAN.GUI
                       bool  hideEpochs,
                       bool  hideV)
         {
+            this.registry  = registry;
             Identifier     = mod.identifier;
             IsAutodetected = registry.IsAutodetected(Identifier);
             DownloadCount  = repoDataMgr.GetDownloadCount(registry.Repositories.Values, Identifier);
@@ -198,7 +200,11 @@ namespace CKAN.GUI
                 {
                     LatestCompatibleMod = registry.LatestAvailable(Identifier,
                                                                    stabilityTolerance,
-                                                                   instance.VersionCriteria());
+                                                                   instance.VersionCriteria(),
+                                                                   null,
+                                                                   registry.InstalledModules
+                                                                           .Select(im => im.Module)
+                                                                           .ToArray());
                     latest_version = LatestCompatibleMod?.version;
                 }
                 catch (ModuleNotFoundKraken)
@@ -217,7 +223,10 @@ namespace CKAN.GUI
 
             try
             {
-                LatestAvailableMod = registry.LatestAvailable(Identifier, stabilityTolerance, null);
+                LatestAvailableMod = registry.LatestAvailable(Identifier, stabilityTolerance, null, null,
+                                                              registry.InstalledModules
+                                                                      .Select(im => im.Module)
+                                                                      .ToArray());
             }
             catch
             { }
@@ -301,7 +310,8 @@ namespace CKAN.GUI
 
         public IEnumerable<ModChange> GetModChanges(bool upgradeChecked,
                                                     bool replaceChecked,
-                                                    bool metadataChanged)
+                                                    bool metadataChanged,
+                                                    bool installedFilesChanged)
         {
             var installed = InstalledMod?.Module;
             if (replaceChecked)
@@ -321,7 +331,7 @@ namespace CKAN.GUI
                 {
                     yield return new ModUpgrade(Mod,
                                                 SelectedMod,
-                                                false, false,
+                                                false, false, false,
                                                 ServiceLocator.Container.Resolve<IConfiguration>());
                 }
                 else
@@ -343,7 +353,7 @@ namespace CKAN.GUI
                 // Reinstall
                 yield return new ModUpgrade(Mod,
                                             SelectedMod,
-                                            false, metadataChanged,
+                                            false, metadataChanged, installedFilesChanged,
                                             ServiceLocator.Container.Resolve<IConfiguration>());
             }
         }
@@ -353,7 +363,7 @@ namespace CKAN.GUI
             if (row.Cells[col.Index] is DataGridViewCheckBoxCell auto_cell
                 && InstalledMod != null)
             {
-                var old_value = (bool) auto_cell.Value;
+                var old_value = auto_cell.Value is true;
 
                 bool value = set_value_to ?? old_value;
                 InstalledMod.AutoInstalled = value;

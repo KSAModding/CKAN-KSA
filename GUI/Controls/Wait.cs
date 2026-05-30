@@ -20,6 +20,7 @@ namespace CKAN.GUI
         public Wait()
         {
             InitializeComponent();
+            DialogProgressBar.ScaleFonts();
             emptyHeight = VerticalSplitter.SplitterDistance;
             bgWorker.DoWork             += DoWork;
             bgWorker.RunWorkerCompleted += RunWorkerCompleted;
@@ -50,6 +51,7 @@ namespace CKAN.GUI
 
         #pragma warning disable IDE0027
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool RetryEnabled
         {
             [ForbidGUICalls]
@@ -59,6 +61,7 @@ namespace CKAN.GUI
             }
         }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public int ProgressValue
         {
             set
@@ -70,6 +73,7 @@ namespace CKAN.GUI
             }
         }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool ProgressIndeterminate
         {
             [ForbidGUICalls]
@@ -187,7 +191,7 @@ namespace CKAN.GUI
                                                                 // If >1 rows, show 1 + active
                                                                 : progressBars.Values
                                                                               .Where(pb => pb.Value < 100))
-                                                    .Sum(pb => pb.GetPreferredSize(Size.Empty).Height
+                                                    .Sum(pb => CreateGraphics().ScaledHeight(pb.GetPreferredSize(Size.Empty).Height)
                                                                + pb.Margin.Vertical);
                         if (ProgressBarTable.Height < newHeight)
                         {

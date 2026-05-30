@@ -30,12 +30,15 @@ namespace CKAN.GUI
                               string?          userAgent)
         {
             InitializeComponent();
+            ClearCacheMenu.ScaleFonts();
+            this.ScaleFonts();
 
             ToolTip.SetToolTip(RefreshTextBox,    Properties.Resources.SettingsToolTipRefreshTextBox);
             ToolTip.SetToolTip(ChangeCacheButton, Properties.Resources.SettingsToolTipChangeCacheButton);
             ToolTip.SetToolTip(ResetCacheButton,  Properties.Resources.SettingsToolTipResetCacheButton);
             ToolTip.SetToolTip(OpenCacheButton,   Properties.Resources.SettingsToolTipOpenCacheButton);
             ToolTip.SetToolTip(ClearCacheButton,  Properties.Resources.SettingsToolTipClearCacheButton);
+            ToolTip.ScaleFonts();
 
             this.coreConfig = coreConfig;
             this.guiConfig  = guiConfig;
@@ -43,10 +46,7 @@ namespace CKAN.GUI
             this.updater    = updater;
             this.user       = user;
             this.userAgent  = userAgent;
-            if (Platform.IsMono)
-            {
-                ClearCacheMenu.Renderer = new FlatToolStripRenderer();
-            }
+            ClearCacheMenu.Renderer = new FlatToolStripRenderer();
             CachePathEditButton.Height = CachePathSaveButton.Height =
                 CachePathCancelButton.Height = CachePathTextBox.Height;
         }
@@ -623,6 +623,7 @@ namespace CKAN.GUI
             newAuthTokenPopup.Controls.Add(cancelButton);
             newAuthTokenPopup.AcceptButton = acceptButton;
             newAuthTokenPopup.CancelButton = cancelButton;
+            newAuthTokenPopup.ScaleFonts();
 
             switch (newAuthTokenPopup.ShowDialog(this))
             {
@@ -731,10 +732,6 @@ namespace CKAN.GUI
             {
                 Hide();
                 Main.Instance.UpdateCKAN();
-            }
-            else
-            {
-                user.RaiseError(Properties.Resources.SettingsDialogUpdateFailed);
             }
         }
 

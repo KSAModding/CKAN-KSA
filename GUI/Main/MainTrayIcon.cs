@@ -55,9 +55,9 @@ namespace CKAN.GUI
 
         private void UpdateTrayInfo()
         {
-            if (CurrentInstance != null && ManageMods.mainModList != null)
+            if (CurrentInstance != null && ManageMods.MainModList != null)
             {
-                var count = ManageMods.mainModList.CountModsByFilter(CurrentInstance,
+                var count = ManageMods.MainModList.CountModsByFilter(CurrentInstance,
                                                                      GUIModFilter.InstalledUpdateAvailable);
                 if (count == 0)
                 {

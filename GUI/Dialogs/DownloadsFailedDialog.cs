@@ -1,4 +1,6 @@
 using System;
+using System.IO;
+using System.Net;
 using System.Linq;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -56,6 +58,9 @@ namespace CKAN.GUI
             Func<object, object, bool> rowsLinked)
         {
             InitializeComponent();
+            GridContextMenuStrip.ScaleFonts();
+            GridContextMenuStrip.Renderer = new FlatToolStripRenderer();
+            this.ScaleFonts();
             ExplanationLabel.Text = TopLabelMessage;
             ModColumn.HeaderText  = ModuleColumnHeader;
             AbortButton.Text      = AbortButtonCaption;
@@ -66,14 +71,14 @@ namespace CKAN.GUI
                 .ToList();
             DownloadsGrid.DataSource = new BindingList<DownloadRow>(rows);
             ClientSize = new Size(ClientSize.Width,
-                ExplanationLabel.Height
-                + ExplanationLabel.Padding.Vertical
-                + DownloadsGrid.ColumnHeadersHeight
-                + (DownloadsGrid.RowCount
-                    * DownloadsGrid.RowTemplate.Height)
-                + DownloadsGrid.Margin.Vertical
-                + DownloadsGrid.Padding.Vertical
-                + BottomButtonPanel.Height);
+                                  ExplanationLabel.Height
+                                  + ExplanationLabel.Padding.Vertical
+                                  + DownloadsGrid.ColumnHeadersHeight
+                                  + DownloadsGrid.Rows.OfType<DataGridViewRow>()
+                                                      .Sum(r => r.Height)
+                                  + DownloadsGrid.Margin.Vertical
+                                  + DownloadsGrid.Padding.Vertical
+                                  + BottomButtonPanel.Height);
         }
 
         [ForbidGUICalls]
@@ -95,6 +100,13 @@ namespace CKAN.GUI
         public object[] Skip  => rows.Where(r => r.Skip)
                                      .Select(r => r.Data)
                                      .ToArray();
+
+        protected override void OnResize(EventArgs e)
+        {
+            ExplanationLabel.MaximumSize = new Size(ClientSize.Width - Padding.Horizontal,
+                                                    ClientSize.Height - Padding.Vertical);
+            base.OnResize(e);
+        }
 
         /// <summary>
         /// Open the user guide when the user presses F1
@@ -140,20 +152,41 @@ namespace CKAN.GUI
         /// </summary>
         private void DownloadsGrid_CellEndEdit(object sender, DataGridViewCellEventArgs e)
         {
-            var binding = (BindingList<DownloadRow>)DownloadsGrid.DataSource;
-            var retry   = rows[e.RowIndex].Retry;
-            // Update all rows with this download
-            for (int i = 0; i < rows.Count; ++i)
+            if (DownloadsGrid.DataSource is BindingList<DownloadRow> binding)
             {
-                if (rowsLinked(rows[e.RowIndex].Data, rows[i].Data))
+                var retry   = rows[e.RowIndex].Retry;
+                // Update all rows with this download
+                for (int i = 0; i < rows.Count; ++i)
                 {
-                    if (i != e.RowIndex)
+                    if (rowsLinked(rows[e.RowIndex].Data, rows[i].Data))
                     {
-                        rows[i].Retry = retry;
+                        if (i != e.RowIndex)
+                        {
+                            rows[i].Retry = retry;
+                        }
+                        binding.ResetItem(i);
                     }
-                    binding.ResetItem(i);
                 }
             }
+        }
+
+        private void DownloadsGrid_MouseDown(object? sender, MouseEventArgs e)
+        {
+            if (e is { Button: MouseButtons.Right})
+            {
+                // Show the context menu
+                GridContextMenuStrip.Show(Cursor.Position);
+            }
+        }
+
+        private void CopyErrorToolStripMenuItem_Click(object? sender, EventArgs? e)
+        {
+            Clipboard.SetText(string.Join(Environment.NewLine,
+                                          DownloadsGrid.Rows
+                                                       .OfType<DataGridViewRow>()
+                                                       .Select(r => r.DataBoundItem)
+                                                       .OfType<DownloadRow>()
+                                                       .Select(r => r.Error)));
         }
 
         private void RetryButton_Click(object? sender, EventArgs? e)
@@ -189,7 +222,15 @@ namespace CKAN.GUI
         {
             Retry = true;
             Data  = data;
-            Error = exc.GetBaseException().Message;
+            Error = exc.GetBaseException() switch
+                    {
+                        // For actual download errors, just report the summary
+                        Kraken       k  => k.Message,
+                        WebException we => we.Message,
+                        IOException  ie => ie.Message,
+                        // If something truly unexpected happens, show the stack trace
+                        var          e  => e.ToString(),
+                    };
         }
 
         /// <summary>

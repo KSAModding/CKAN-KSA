@@ -19,13 +19,6 @@ namespace CKAN.GUI
     {
         public DownloadStatisticsPieChart() : base()
         {
-            Model = new PlotModel()
-            {
-                Title               = Properties.Resources.DownloadStatisticsPieChartTitle,
-                TitleColor          = SystemColors.ControlText.ToOxyColor(),
-                TextColor           = SystemColors.ControlText.ToOxyColor(),
-                PlotAreaBorderColor = SystemColors.Control.ToOxyColor(),
-            };
             Controller = new PlotController();
             // Get rid of the weird click-toooltip thing
             Controller.UnbindMouseDown(OxyMouseButton.Left);
@@ -33,12 +26,21 @@ namespace CKAN.GUI
 
         public void SetData(IReadOnlyDictionary<string, long> bytesPerHost)
         {
+            Model = new PlotModel()
+            {
+                Title               = Properties.Resources.DownloadStatisticsPieChartTitle,
+                TitleColor          = SystemColors.ControlText.ToOxyColor(),
+                TextColor           = SystemColors.ControlText.ToOxyColor(),
+                SubtitleColor       = SystemColors.ControlText.ToOxyColor(),
+                PlotAreaBorderColor = SystemColors.Control.ToOxyColor(),
+            };
             var totalSize = bytesPerHost.Values.Sum();
             var numLabels = bytesPerHost.Values.Count(size => size >= totalSize * 5 / 100) + 1;
             Model.Series.Clear();
             Model.Series.Add(new PieSeries()
             {
                 Title               = Properties.Resources.DownloadStatisticsPieChartTitle,
+                TextColor           = SystemColors.ControlText.ToOxyColor(),
                 Diameter            = 0.75,
                 TickRadialLength    = 25,
                 StartAngle          = 180,

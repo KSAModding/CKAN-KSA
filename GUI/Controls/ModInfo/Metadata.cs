@@ -19,6 +19,7 @@ namespace CKAN.GUI
         public Metadata()
         {
             InitializeComponent();
+            ToolTip.ScaleFonts();
             staticRowCount = MetadataTable.RowCount;
         }
 
@@ -100,7 +101,8 @@ namespace CKAN.GUI
                     AddResourceLink(Properties.Resources.ModInfoGogStoreLabel,              res.gogstore);
                     AddResourceLink(Properties.Resources.ModInfoEpicStoreLabel,             res.epicstore);
                 }
-                MetadataTable.ResumeLayout();
+                MetadataTable.ResumeLayout(true);
+                ResizeResourceRows();
             });
         }
 
@@ -112,7 +114,7 @@ namespace CKAN.GUI
             AuthorsPanel.Controls.Clear();
             AuthorsPanel.Controls.AddRange(
                 authors.Select(AuthorLink).ToArray());
-            AuthorsPanel.ResumeLayout();
+            AuthorsPanel.ResumeLayout(true);
         }
 
         private LinkLabel AuthorLink(string name)
@@ -212,7 +214,7 @@ namespace CKAN.GUI
 
         private void AddResourceLink(string label, Uri? link)
         {
-            const int vPadding = 5;
+            const int vPadding = 3;
             if (link != null)
             {
                 Label lbl = new Label()
@@ -230,6 +232,8 @@ namespace CKAN.GUI
                     Padding  = new Padding(0, vPadding, 0, vPadding),
                     TabStop  = true,
                     Text     = link.ToString(),
+                    // Lighter colors for dark mode
+                    LinkColor = BackColor.LinkColorForBackColor(),
                 };
                 llbl.LinkClicked += new LinkLabelLinkClickedEventHandler(LinkLabel_LinkClicked);
                 llbl.KeyDown += new KeyEventHandler(LinkLabel_KeyDown);
@@ -251,6 +255,7 @@ namespace CKAN.GUI
             {
                 MetadataTable.SuspendLayout();
                 var rWidth = RightColumnWidth;
+                var g = CreateGraphics();
                 for (int row = staticRowCount; row < MetadataTable.RowStyles.Count; ++row)
                 {
                     if (MetadataTable.GetControlFromPosition(0, row) is Label lab
@@ -258,11 +263,11 @@ namespace CKAN.GUI
                     {
                         MetadataTable.RowStyles[row].Height = Math.Max(
                             // "Remote version file" wraps
-                            Util.LabelStringHeight(CreateGraphics(), lab),
+                            Util.LabelStringHeight(g, lab),
                             LinkLabelStringHeight(link, rWidth));
                     }
                 }
-                MetadataTable.ResumeLayout();
+                MetadataTable.ResumeLayout(true);
             }
         }
 

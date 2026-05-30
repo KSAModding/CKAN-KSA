@@ -24,17 +24,15 @@ namespace CKAN.GUI
 
         private void InstallationHistory_Install(CkanModule[] modules)
         {
-            if (CurrentInstance != null && ManageMods.mainModList != null)
+            if (CurrentInstance != null && ManageMods.MainModList != null)
             {
                 InstallationHistory_Done();
-                var tuple = ManageMods.mainModList.ComputeFullChangeSetFromUserChangeSet(
+                var tuple = ModList.ComputeFullChangeSetFromUserChangeSet(
                     RegistryManager.Instance(CurrentInstance, repoData).registry,
                     modules.Select(mod => new ModChange(mod, GUIModChangeType.Install,
                                                         ServiceLocator.Container.Resolve<IConfiguration>()))
                            .ToHashSet(),
-                    CurrentInstance.Game,
-                    CurrentInstance.StabilityToleranceConfig,
-                    CurrentInstance.VersionCriteria());
+                    ServiceLocator.Container.Resolve<IConfiguration>(), CurrentInstance);
                 UpdateChangesDialog(tuple.Item1.ToList(), tuple.Item2);
                 tabController.ShowTab(ChangesetTabPage.Name, 1);
             }

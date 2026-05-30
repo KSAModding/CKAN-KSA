@@ -50,6 +50,8 @@ namespace CKAN.GUI
             this.FilterIncompatibleButton = new System.Windows.Forms.ToolStripMenuItem();
             this.FilterAllButton = new System.Windows.Forms.ToolStripMenuItem();
             this.FilterLabelsToolButton = new System.Windows.Forms.ToolStripMenuItem();
+            this.FilterLabelsToolStripSeparator = new System.Windows.Forms.ToolStripSeparator();
+            this.FilterLabelsEditToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.FilterTagsToolButton = new System.Windows.Forms.ToolStripMenuItem();
             this.NavBackwardToolButton = new System.Windows.Forms.ToolStripMenuItem();
             this.NavForwardToolButton = new System.Windows.Forms.ToolStripMenuItem();
@@ -78,7 +80,7 @@ namespace CKAN.GUI
             this.tagFilterToolStripSeparator = new System.Windows.Forms.ToolStripSeparator();
             this.untaggedFilterToolStripSeparator = new System.Windows.Forms.ToolStripSeparator();
             this.labelsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.labelToolStripSeparator = new System.Windows.Forms.ToolStripSeparator();
+            this.labelsToolStripSeparator = new System.Windows.Forms.ToolStripSeparator();
             this.editLabelsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.reinstallToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.downloadContentsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -199,70 +201,70 @@ namespace CKAN.GUI
             //
             this.FilterCompatibleButton.Name = "FilterCompatibleButton";
             this.FilterCompatibleButton.Size = new System.Drawing.Size(307, 30);
-            this.FilterCompatibleButton.Click += new System.EventHandler(this.FilterCompatibleButton_Click);
+            this.FilterCompatibleButton.MouseDown += new System.Windows.Forms.MouseEventHandler(this.FilterCompatibleButton_Click);
             resources.ApplyResources(this.FilterCompatibleButton, "FilterCompatibleButton");
             //
             // FilterInstalledButton
             //
             this.FilterInstalledButton.Name = "FilterInstalledButton";
             this.FilterInstalledButton.Size = new System.Drawing.Size(307, 30);
-            this.FilterInstalledButton.Click += new System.EventHandler(this.FilterInstalledButton_Click);
+            this.FilterInstalledButton.MouseDown += new System.Windows.Forms.MouseEventHandler(this.FilterInstalledButton_Click);
             resources.ApplyResources(this.FilterInstalledButton, "FilterInstalledButton");
             //
             // FilterInstalledUpdateButton
             //
             this.FilterInstalledUpdateButton.Name = "FilterInstalledUpdateButton";
             this.FilterInstalledUpdateButton.Size = new System.Drawing.Size(307, 30);
-            this.FilterInstalledUpdateButton.Click += new System.EventHandler(this.FilterInstalledUpdateButton_Click);
+            this.FilterInstalledUpdateButton.MouseDown += new System.Windows.Forms.MouseEventHandler(this.FilterInstalledUpdateButton_Click);
             resources.ApplyResources(this.FilterInstalledUpdateButton, "FilterInstalledUpdateButton");
             //
             // FilterReplaceableButton
             //
             this.FilterReplaceableButton.Name = "FilterReplaceableButton";
             this.FilterReplaceableButton.Size = new System.Drawing.Size(307, 30);
-            this.FilterReplaceableButton.Click += new System.EventHandler(this.FilterReplaceableButton_Click);
+            this.FilterReplaceableButton.MouseDown += new System.Windows.Forms.MouseEventHandler(this.FilterReplaceableButton_Click);
             resources.ApplyResources(this.FilterReplaceableButton, "FilterReplaceableButton");
             //
             // FilterCachedButton
             //
             this.FilterCachedButton.Name = "FilterCachedButton";
             this.FilterCachedButton.Size = new System.Drawing.Size(307, 30);
-            this.FilterCachedButton.Click += new System.EventHandler(this.FilterCachedButton_Click);
+            this.FilterCachedButton.MouseDown += new System.Windows.Forms.MouseEventHandler(this.FilterCachedButton_Click);
             resources.ApplyResources(this.FilterCachedButton, "FilterCachedButton");
             //
             // FilterUncachedButton
             //
             this.FilterUncachedButton.Name = "FilterUncachedButton";
             this.FilterUncachedButton.Size = new System.Drawing.Size(307, 30);
-            this.FilterUncachedButton.Click += new System.EventHandler(this.FilterUncachedButton_Click);
+            this.FilterUncachedButton.MouseDown += new System.Windows.Forms.MouseEventHandler(this.FilterUncachedButton_Click);
             resources.ApplyResources(this.FilterUncachedButton, "FilterUncachedButton");
             //
             // FilterNewButton
             //
             this.FilterNewButton.Name = "FilterNewButton";
             this.FilterNewButton.Size = new System.Drawing.Size(307, 30);
-            this.FilterNewButton.Click += new System.EventHandler(this.FilterNewButton_Click);
+            this.FilterNewButton.MouseDown += new System.Windows.Forms.MouseEventHandler(this.FilterNewButton_Click);
             resources.ApplyResources(this.FilterNewButton, "FilterNewButton");
             //
             // FilterNotInstalledButton
             //
             this.FilterNotInstalledButton.Name = "FilterNotInstalledButton";
             this.FilterNotInstalledButton.Size = new System.Drawing.Size(307, 30);
-            this.FilterNotInstalledButton.Click += new System.EventHandler(this.FilterNotInstalledButton_Click);
+            this.FilterNotInstalledButton.MouseDown += new System.Windows.Forms.MouseEventHandler(this.FilterNotInstalledButton_Click);
             resources.ApplyResources(this.FilterNotInstalledButton, "FilterNotInstalledButton");
             //
             // FilterIncompatibleButton
             //
             this.FilterIncompatibleButton.Name = "FilterIncompatibleButton";
             this.FilterIncompatibleButton.Size = new System.Drawing.Size(307, 30);
-            this.FilterIncompatibleButton.Click += new System.EventHandler(this.FilterIncompatibleButton_Click);
+            this.FilterIncompatibleButton.MouseDown += new System.Windows.Forms.MouseEventHandler(this.FilterIncompatibleButton_Click);
             resources.ApplyResources(this.FilterIncompatibleButton, "FilterIncompatibleButton");
             //
             // FilterAllButton
             //
             this.FilterAllButton.Name = "FilterAllButton";
             this.FilterAllButton.Size = new System.Drawing.Size(307, 30);
-            this.FilterAllButton.Click += new System.EventHandler(this.FilterAllButton_Click);
+            this.FilterAllButton.MouseDown += new System.Windows.Forms.MouseEventHandler(this.FilterAllButton_Click);
             resources.ApplyResources(this.FilterAllButton, "FilterAllButton");
             //
             // FilterTagsToolButton
@@ -278,6 +280,13 @@ namespace CKAN.GUI
             this.FilterLabelsToolButton.Size = new System.Drawing.Size(179, 22);
             resources.ApplyResources(this.FilterLabelsToolButton, "FilterLabelsToolButton");
             this.FilterLabelsToolButton.DropDown.Opening += new System.ComponentModel.CancelEventHandler(FilterLabelsToolButton_DropDown_Opening);
+            //
+            // FilterLabelsEditToolStripMenuItem
+            //
+            this.FilterLabelsEditToolStripMenuItem.Name = "FilterLabelsEditToolStripMenuItem";
+            this.FilterLabelsEditToolStripMenuItem.Size = new System.Drawing.Size(179, 22);
+            this.FilterLabelsEditToolStripMenuItem.Click += new System.EventHandler(this.editLabelsToolStripMenuItem_Click);
+            resources.ApplyResources(this.FilterLabelsEditToolStripMenuItem, "FilterLabelsEditToolStripMenuItem");
             //
             // NavBackwardToolButton
             //
@@ -318,19 +327,16 @@ namespace CKAN.GUI
             //
             // ModGrid
             //
-            this.ModGrid.Dock = System.Windows.Forms.DockStyle.Fill;
             this.ModGrid.AllowUserToAddRows = false;
             this.ModGrid.AllowUserToDeleteRows = false;
             this.ModGrid.AllowUserToResizeRows = false;
+            this.ModGrid.AutoSizeRowsMode = System.Windows.Forms.DataGridViewAutoSizeRowsMode.DisplayedCellsExceptHeaders;
             this.ModGrid.BackgroundColor = System.Drawing.SystemColors.Window;
-            this.ModGrid.EnableHeadersVisualStyles = false;
+            this.ModGrid.CellBorderStyle = System.Windows.Forms.DataGridViewCellBorderStyle.None;
             this.ModGrid.ColumnHeadersDefaultCellStyle.BackColor = System.Drawing.SystemColors.Control;
             this.ModGrid.ColumnHeadersDefaultCellStyle.SelectionBackColor = System.Drawing.SystemColors.Control;
             this.ModGrid.ColumnHeadersDefaultCellStyle.ForeColor = System.Drawing.SystemColors.ControlText;
             this.ModGrid.ColumnHeadersDefaultCellStyle.Padding = new System.Windows.Forms.Padding(2, 2, 2, 2);
-            this.ModGrid.DefaultCellStyle.ForeColor = System.Drawing.SystemColors.WindowText;
-            this.ModGrid.CellBorderStyle = System.Windows.Forms.DataGridViewCellBorderStyle.None;
-            this.ModGrid.ColumnHeadersBorderStyle = System.Windows.Forms.DataGridViewHeaderBorderStyle.None;
             this.ModGrid.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             this.ModGrid.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
             this.Installed,
@@ -348,6 +354,10 @@ namespace CKAN.GUI
             this.InstallDate,
             this.DownloadCount,
             this.Description});
+            this.ModGrid.DefaultCellStyle.ForeColor = System.Drawing.SystemColors.WindowText;
+            this.ModGrid.DefaultCellStyle.Padding = new System.Windows.Forms.Padding(2, 4, 2, 4);
+            this.ModGrid.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.ModGrid.EnableHeadersVisualStyles = false;
             this.ModGrid.Location = new System.Drawing.Point(0, 111);
             this.ModGrid.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.ModGrid.MultiSelect = true;
@@ -371,7 +381,9 @@ namespace CKAN.GUI
             //
             // Installed
             //
+            this.Installed.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.None;
             this.Installed.Name = "Installed";
+            this.Installed.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.Installed.Frozen = true;
             this.Installed.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Programmatic;
             this.Installed.DefaultCellStyle.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleCenter;
@@ -380,7 +392,9 @@ namespace CKAN.GUI
             //
             // AutoInstalled
             //
+            this.AutoInstalled.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.None;
             this.AutoInstalled.Name = "AutoInstalled";
+            this.AutoInstalled.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.AutoInstalled.Frozen = true;
             this.AutoInstalled.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Programmatic;
             this.AutoInstalled.DefaultCellStyle.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleCenter;
@@ -389,7 +403,9 @@ namespace CKAN.GUI
             //
             // UpdateCol
             //
+            this.UpdateCol.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.None;
             this.UpdateCol.Name = "UpdateCol";
+            this.UpdateCol.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.UpdateCol.Frozen = true;
             this.UpdateCol.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Programmatic;
             this.UpdateCol.DefaultCellStyle.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleCenter;
@@ -398,7 +414,9 @@ namespace CKAN.GUI
             //
             // ReplaceCol
             //
+            this.ModName.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.None;
             this.ReplaceCol.Name = "ReplaceCol";
+            this.ReplaceCol.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             this.ReplaceCol.Frozen = true;
             this.ReplaceCol.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Programmatic;
             this.ReplaceCol.DefaultCellStyle.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleCenter;
@@ -407,22 +425,25 @@ namespace CKAN.GUI
             //
             // ModName
             //
+            this.ModName.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
             this.ModName.Name = "ModName";
             this.ModName.ReadOnly = true;
             this.ModName.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Programmatic;
-            this.ModName.Width = 250;
+            this.ModName.MinimumWidth = 250;
             resources.ApplyResources(this.ModName, "ModName");
             //
             // Author
             //
+            this.Author.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
             this.Author.Name = "Author";
             this.Author.ReadOnly = true;
             this.Author.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Programmatic;
-            this.Author.Width = 120;
+            this.Author.MinimumWidth = 120;
             resources.ApplyResources(this.Author, "Author");
             //
             // InstalledVersion
             //
+            this.InstalledVersion.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCellsExceptHeader;
             this.InstalledVersion.Name = "InstalledVersion";
             this.InstalledVersion.ReadOnly = true;
             this.InstalledVersion.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Programmatic;
@@ -431,14 +452,16 @@ namespace CKAN.GUI
             //
             // LatestVersion
             //
+            this.LatestVersion.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
             this.LatestVersion.Name = "LatestVersion";
             this.LatestVersion.ReadOnly = true;
             this.LatestVersion.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Programmatic;
-            this.LatestVersion.Width = 70;
+            this.LatestVersion.MinimumWidth = 70;
             resources.ApplyResources(this.LatestVersion, "LatestVersion");
             //
             // GameCompatibility
             //
+            this.GameCompatibility.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCellsExceptHeader;
             this.GameCompatibility.Name = "GameCompatibility";
             this.GameCompatibility.ReadOnly = true;
             this.GameCompatibility.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Programmatic;
@@ -447,6 +470,7 @@ namespace CKAN.GUI
             //
             // DownloadSize
             //
+            this.DownloadSize.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCellsExceptHeader;
             this.DownloadSize.Name = "DownloadSize";
             this.DownloadSize.ReadOnly = true;
             this.DownloadSize.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Programmatic;
@@ -455,6 +479,7 @@ namespace CKAN.GUI
             //
             // InstallSize
             //
+            this.InstallSize.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCellsExceptHeader;
             this.InstallSize.Name = "InstallSize";
             this.InstallSize.ReadOnly = true;
             this.InstallSize.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Programmatic;
@@ -463,6 +488,7 @@ namespace CKAN.GUI
             //
             // ReleaseDate
             //
+            this.ReleaseDate.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCellsExceptHeader;
             this.ReleaseDate.Name = "ReleaseDate";
             this.ReleaseDate.ReadOnly = true;
             this.ReleaseDate.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Programmatic;
@@ -471,6 +497,7 @@ namespace CKAN.GUI
             //
             // InstallDate
             //
+            this.InstallDate.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCellsExceptHeader;
             this.InstallDate.Name = "InstallDate";
             this.InstallDate.ReadOnly = true;
             this.InstallDate.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Programmatic;
@@ -479,6 +506,7 @@ namespace CKAN.GUI
             //
             // DownloadCount
             //
+            this.DownloadCount.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.AllCellsExceptHeader;
             this.DownloadCount.Name = "DownloadCount";
             this.DownloadCount.ReadOnly = true;
             this.DownloadCount.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Programmatic;
@@ -488,10 +516,11 @@ namespace CKAN.GUI
             //
             // Description
             //
+            this.Description.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.Fill;
             this.Description.Name = "Description";
             this.Description.ReadOnly = true;
             this.Description.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Programmatic;
-            this.Description.Width = 821;
+            this.Description.MinimumWidth = 600;
             resources.ApplyResources(this.Description, "Description");
             //
             // ModListContextMenuStrip
@@ -570,8 +599,8 @@ namespace CKAN.GUI
             //
             // ManageMods
             //
-            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 16F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
             this.Controls.Add(this.InstallAllCheckbox);
             this.Controls.Add(this.ModGrid);
             this.Controls.Add(this.hiddenTagsLabelsLinkList);
@@ -614,6 +643,8 @@ namespace CKAN.GUI
         private System.Windows.Forms.ToolStripMenuItem FilterIncompatibleButton;
         private System.Windows.Forms.ToolStripMenuItem FilterAllButton;
         private System.Windows.Forms.ToolStripMenuItem FilterLabelsToolButton;
+        private System.Windows.Forms.ToolStripSeparator FilterLabelsToolStripSeparator;
+        private System.Windows.Forms.ToolStripMenuItem FilterLabelsEditToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem FilterTagsToolButton;
         private System.Windows.Forms.ToolStripMenuItem NavBackwardToolButton;
         private System.Windows.Forms.ToolStripMenuItem NavForwardToolButton;
@@ -641,7 +672,7 @@ namespace CKAN.GUI
         private System.Windows.Forms.ContextMenuStrip LabelsContextMenuStrip;
         private System.Windows.Forms.ContextMenuStrip ModListHeaderContextMenuStrip;
         private System.Windows.Forms.ToolStripMenuItem labelsToolStripMenuItem;
-        private System.Windows.Forms.ToolStripSeparator labelToolStripSeparator;
+        private System.Windows.Forms.ToolStripSeparator labelsToolStripSeparator;
         private System.Windows.Forms.ToolStripMenuItem editLabelsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem reinstallToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem downloadContentsToolStripMenuItem;

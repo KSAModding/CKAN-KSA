@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using System.Drawing;
 using System.Windows.Forms;
 #if NET5_0_OR_GREATER
@@ -23,6 +24,7 @@ namespace CKAN.GUI
                 ReshowDelay  = 250,
                 ShowAlways   = true,
             };
+            ToolTip.ScaleFonts();
 
             YesRadioButton  = MakeRadioButton(0, EmbeddedImages.triToggleYes,
                 Properties.Resources.TriStateToggleYesTooltip);
@@ -40,6 +42,7 @@ namespace CKAN.GUI
             PerformLayout();
         }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool? Value
         {
             get => YesRadioButton.Checked ? true

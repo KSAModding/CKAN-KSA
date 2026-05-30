@@ -127,8 +127,7 @@ namespace CKAN
                 serializer.Serialize(writer, this);
             }
             var txFileMgr = new TxFileManager();
-            txFileMgr.WriteAllText(path, sw + Environment.NewLine,
-                                   Encoding.UTF8);
+            txFileMgr.WriteAllBytes(path, Encoding.UTF8.GetBytes(sw + Environment.NewLine));
         }
 
         /// <summary>
@@ -136,7 +135,7 @@ namespace CKAN
         /// </summary>
         /// <param name="path">Filename of the JSON file to load</param>
         /// <param name="progress">Progress notifier to receive updates of percent completion of this file</param>
-        /// <returns>A repo data object or null if loading fails</returns>
+        /// <returns>A repo data object or null if there is no such file</returns>
         public static RepositoryData? FromJson(string path, IProgress<int>? progress)
         {
             try
@@ -169,9 +168,10 @@ namespace CKAN
                                          .Deserialize<RepositoryData>(jStream);
                 }
             }
-            catch (Exception exc)
+            catch (FileNotFoundException exc)
             {
-                log.DebugFormat("Valid repository data not found at {0}: {1}", path, exc.Message);
+                log.DebugFormat("Valid repository data not found at {0}: {1}",
+                                path, exc.Message);
                 return null;
             }
         }
@@ -239,7 +239,11 @@ namespace CKAN
 
             byte[] buffer = new byte[buffer_size];
 
-            stream.Read(buffer, 0, buffer_size);
+            var len = stream.Read(buffer, 0, buffer_size);
+            if (len != buffer_size)
+            {
+                throw new Exception($"TarInputStream.Read returned {len} bytes, requested {buffer_size}");
+            }
 
             // Convert the buffer data to a string.
             return Encoding.UTF8.GetString(buffer);

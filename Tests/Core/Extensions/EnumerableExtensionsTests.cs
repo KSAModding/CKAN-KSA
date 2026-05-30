@@ -10,6 +10,15 @@ namespace Tests.Core.Extensions
     [TestFixture]
     public class EnumerableExtensionsTests
     {
+        [TestCase(new string[] { "A", "B", "C", "D" },
+                  new string[] { "A", "S", "D", "F" },
+                  ExpectedResult = true),
+         TestCase(new string[] { "A", "B", "C", "D" },
+                  new string[] { "E", "F", "G", "H" },
+                  ExpectedResult = false)]
+        public bool IntersectsWith_Examples_Works(string[] a, string[] b)
+            => a.IntersectsWith(b);
+
         [TestCaseSource(nameof(TimeSpanCases))]
         public TimeSpan Sum_Timespans_Works(TimeSpan[] spans)
             => spans.Sum();

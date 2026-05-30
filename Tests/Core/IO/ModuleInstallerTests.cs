@@ -974,6 +974,55 @@ namespace Tests.Core.IO
             }
         }
 
+        [Test]
+        public void FindRecommendations_WithConflictingRecommendations_FindsAll()
+        {
+            // Arrange
+            var user            = new NullUser();
+            var modGen          = new RandomModuleGenerator(new Random());
+            var recommendation1 = modGen.GenerateRandomModule();
+            var recommendation2 = modGen.GenerateRandomModule(conflicts: new List<RelationshipDescriptor>()
+            {
+                new ModuleRelationshipDescriptor() { name = recommendation1.identifier },
+            });
+            var recommendation3 = modGen.GenerateRandomModule(conflicts: new List<RelationshipDescriptor>()
+            {
+                new ModuleRelationshipDescriptor() { name = recommendation1.identifier },
+                new ModuleRelationshipDescriptor() { name = recommendation2.identifier },
+            });
+            var recommender = modGen.GenerateRandomModule(recommends: new List<RelationshipDescriptor>()
+            {
+                new ModuleRelationshipDescriptor() { name = recommendation3.identifier },
+                new ModuleRelationshipDescriptor() { name = recommendation1.identifier },
+                new ModuleRelationshipDescriptor() { name = recommendation2.identifier },
+            });
+            using (var inst = new DisposableKSP())
+            using (var repo = new TemporaryRepository(recommendation1.ToJson(),
+                                                      recommendation2.ToJson(),
+                                                      recommendation3.ToJson(),
+                                                      recommender.ToJson()))
+            using (var repoData = new TemporaryRepositoryData(user, repo.repo))
+            {
+                var registry = new CKAN.Registry(repoData.Manager, repo.repo);
+
+                // Act
+                var result = ModuleInstaller.FindRecommendations(inst.KSP,
+                                                                 new CkanModule[] { recommender },
+                                                                 new CkanModule[] { recommender },
+                                                                 new CkanModule[] { },
+                                                                 new CkanModule[] { },
+                                                                 registry,
+                                                                 out var recs,
+                                                                 out var sugs,
+                                                                 out var sups);
+
+                // Assert
+                Assert.IsTrue(result);
+                CollectionAssert.AreEquivalent(new CkanModule[] { recommendation1, recommendation2, recommendation3 },
+                                               recs.Keys);
+            }
+        }
+
         [TestCase(new string[]
                   {
                       @"{
@@ -1608,7 +1657,7 @@ namespace Tests.Core.IO
                                       registry.LatestAvailable(ident, inst.KSP.StabilityToleranceConfig, inst.KSP.VersionCriteria()))
                                                     .OfType<CkanModule>()
                                                     .ToArray(),
-                                  downloader, ref possibleConfigOnlyDirs, regMgr, null, null, false);
+                                  downloader, ref possibleConfigOnlyDirs, regMgr, null, null, null, false);
 
                 // Assert
                 CollectionAssert.AreEquivalent(correctRemainingIdentifiers,
@@ -1706,7 +1755,7 @@ namespace Tests.Core.IO
                     installer.Upgrade(toUpgrade.Select(CkanModule.FromJson)
                                                .ToArray(),
                                       downloader, ref possibleConfigOnlyDirs,
-                                      regMgr, null, null, false);
+                                      regMgr, null, null, null, false);
                 });
                 CollectionAssert.AreEquivalent(registry.InstalledModules.Select(im => im.Module),
                                                autoInstalled.Select(CkanModule.FromJson)
@@ -1714,12 +1763,16 @@ namespace Tests.Core.IO
             }
         }
 
-        [TestCase(true,  true),
-         TestCase(true,  false),
-         TestCase(false, true),
-         TestCase(false, false)]
+        [TestCase(true,  true,  false),
+         TestCase(true,  false, false),
+         TestCase(true,  false, true),
+         TestCase(false, true,  false),
+         TestCase(false, false, false),
+         TestCase(false, false, true),
+        ]
         public void Upgrade_IncompleteInCache_Completes(bool startInstalled,
-                                                        bool withIncomplete)
+                                                        bool withIncomplete,
+                                                        bool withComplete)
         {
             // Arrange
             using (var inst     = new DisposableKSP())
@@ -1740,6 +1793,7 @@ namespace Tests.Core.IO
                 var module      = registry.LatestAvailable("DogeCoinFlag",
                                                            inst.KSP.StabilityToleranceConfig,
                                                            inst.KSP.VersionCriteria())!;
+                module.license  = new List<License> { License.UnknownLicense };
                 module.download = new List<Uri> { new Uri($"{server.Url}/DogeCoinFlag-1.01.zip") };
 
                 if (withIncomplete)
@@ -1749,6 +1803,11 @@ namespace Tests.Core.IO
                     File.WriteAllBytes(filename, File.ReadAllBytes(TestData.DogeCoinFlagZip())
                                                      .Take(20000)
                                                      .ToArray());
+                }
+                else if (withComplete)
+                {
+                    var filename = manager.Cache!.GetInProgressFileName(module)!.FullName;
+                    File.Copy(TestData.DogeCoinFlagZip(), filename);
                 }
                 if (startInstalled)
                 {
@@ -1773,6 +1832,42 @@ namespace Tests.Core.IO
                                       regMgr,
                                       ConfirmPrompt: false);
                 });
+            }
+        }
+
+        [Test]
+        public void Upgrade_WithSkipFiles_FilesNotTouched()
+        {
+            // Arrange
+            var repo = new Repository("test", "https://github.com/");
+            using (var inst     = new DisposableKSP(TestData.TestRegistry()))
+            using (var config   = new FakeConfiguration(inst.KSP, inst.KSP.Name))
+            using (var regMgr   = RegistryManager.Instance(inst.KSP, new RepositoryDataManager(),
+                                                           new Repository[] { repo }))
+            using (var cacheDir = new TemporaryDirectory())
+            using (var cache    = new NetModuleCache(cacheDir))
+            {
+                var registry  = regMgr.registry;
+                var installer = new ModuleInstaller(inst.KSP, cache, config, nullUser);
+                var module    = TestData.DogeCoinFlag_101_module_find();
+
+                // Act
+                HashSet<string>? possibleConfigOnlyDirs = null;
+                installer.Upgrade(new CkanModule[] { module },
+                                  new NetAsyncModulesDownloader(nullUser, cache),
+                                  ref possibleConfigOnlyDirs,regMgr,
+                                  null, null,
+                                  new HashSet<CkanModule> { module });
+
+                // Assert
+                var gameDataPath = Path.Combine(inst.KSP.GameDir, "GameData");
+                CollectionAssert.AreEquivalent(new string[]
+                                               {
+                                                   CKANPathUtils.NormalizePath(Path.Combine(gameDataPath, "README.md"))
+                                               },
+                                               new DirectoryInfo(gameDataPath).EnumerateFileSystemInfos()
+                                                                              .Select(fsi => fsi.FullName)
+                                                                              .Select(CKANPathUtils.NormalizePath));
             }
         }
 
@@ -2058,6 +2153,13 @@ namespace Tests.Core.IO
                                                      .Skip(20000)
                                                      .ToArray()));
             server.Given(Request.Create()
+                                .WithHeader("Range", new ExactMatcher("bytes=53647-"))
+                                .WithPath("/DogeCoinFlag-1.01.zip")
+                                .UsingGet())
+                  .RespondWith(Response.Create()
+                                       .WithStatusCode(HttpStatusCode.RequestedRangeNotSatisfiable)
+                                       .WithBody("Error page from server"));
+            server.Given(Request.Create()
                                 .WithPath("/DogeCoinFlag-1.01.zip")
                                 .UsingGet())
                   .RespondWith(Response.Create()
@@ -2270,6 +2372,39 @@ namespace Tests.Core.IO
                 // Assert
                 CollectionAssert.AreEquivalent(depIdents.Append("KSP2ModPack"),
                                                regMgr.registry.InstalledModules.Select(im => im.identifier));
+            }
+        }
+
+        [Test]
+        public void InstallList_CorruptInCache_PurgesAndThrows()
+        {
+            // Arrange
+            using (var repo     = new TemporaryRepository(TestData.DogeCoinFlag_101()))
+            using (var repoData = new TemporaryRepositoryData(nullUser, repo.repo))
+            using (var inst     = new DisposableKSP())
+            using (var config   = new FakeConfiguration(inst.KSP, inst.KSP.Name))
+            using (var regMgr   = RegistryManager.Instance(inst.KSP, repoData.Manager,
+                                                           new Repository[] { repo.repo }))
+            using (var cacheDir = new TemporaryDirectory())
+            using (var cache    = new NetModuleCache(cacheDir))
+            {
+                var installer = new ModuleInstaller(inst.KSP, cache, config, nullUser);
+                var cachePath = cache.Store(TestData.DogeCoinFlag_101_module(),
+                                            TestData.DogeCoinFlagZip(),
+                                            null)!;
+                File.Copy(TestData.DogeCoinFlagZipCorrupt(), cachePath, true);
+
+                // Act / Assert
+                var exc = Assert.Throws<InvalidModuleFileKraken>(() =>
+                {
+                    HashSet<string>? possibleConfigOnlyDirs = null;
+                    installer.InstallList(new CkanModule[] { TestData.DogeCoinFlag_101_module() },
+                                          new RelationshipResolverOptions(inst.KSP.StabilityToleranceConfig),
+                                          regMgr, ref possibleConfigOnlyDirs);
+                });
+                FileAssert.DoesNotExist(cachePath);
+                Assert.AreEqual("Download for DogeCoinFlag 1.01 was corrupted and has been purged.\r\nThis may be due to a failing storage device; you should back up all important data, scan your storage device for errors, and replace it as soon as you can.\r\nIf you try installing this module again, it will be re-downloaded and may succeed.\r\nException details: Cannot find central directory",
+                                exc?.Message);
             }
         }
 

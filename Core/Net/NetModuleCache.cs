@@ -21,13 +21,6 @@ namespace CKAN
     /// </summary>
     public class NetModuleCache : IDisposable
     {
-        static NetModuleCache()
-        {
-            // SharpZibLib 1.1.0 changed this to default to false, but we depend on it for international mods.
-            // https://github.com/icsharpcode/SharpZipLib/issues/591
-            ZipStrings.UseUnicode = true;
-        }
-
         /// <summary>
         /// Initialize the cache
         /// </summary>
@@ -86,6 +79,8 @@ namespace CKAN
         {
             cache.CheckFreeSpace(bytesToStore);
         }
+        public bool OnSameDevice(DirectoryInfo dir)
+            => cache.OnSameDevice(dir);
 
         public FileInfo? GetInProgressFileName(CkanModule m)
             => m.download == null

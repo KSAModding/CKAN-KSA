@@ -161,7 +161,7 @@ namespace CKAN.GUI
             //
             this.AuthorsPanel.AutoSize = true;
             this.AuthorsPanel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.AuthorsPanel.Margin = new System.Windows.Forms.Padding(0, 0, 0, 10);
+            this.AuthorsPanel.Margin = new System.Windows.Forms.Padding(4, 0, 0, 10);
             this.AuthorsPanel.Padding = new System.Windows.Forms.Padding(0);
             this.AuthorsPanel.Location = new System.Drawing.Point(0, 0);
             this.AuthorsPanel.Name = "AuthorsPanel";
@@ -295,8 +295,8 @@ namespace CKAN.GUI
             //
             // Metadata
             //
-            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 16F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
             this.Controls.Add(this.MetadataTable);
             this.Name = "Metadata";
             this.Size = new System.Drawing.Size(362, 531);

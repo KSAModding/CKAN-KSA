@@ -60,7 +60,10 @@ namespace CKAN.IO
                                             .Where(m => m.IsCompatible(instance.VersionCriteria()))
                                             .ToHashSet();
 
-            var deletable = matched.Keys.ToList();
+            // Don't offer to delete mods w/ no metadata in main repo (probably paid mods w/ internal .ckans)
+            var deletable = matched.Where(kvp => kvp.Value.All(m => registry.GetModuleByVersion(m.identifier, m.version) != null))
+                                   .Select(kvp => kvp.Key)
+                                   .ToList();
             var delete    = allowDelete
                             && deletable.Count > 0
                             && user.RaiseYesNoDialog(string.Format(Properties.Resources.ModuleInstallerImportDeletePrompt,
@@ -70,7 +73,10 @@ namespace CKAN.IO
             var cachedGroups = matched.SelectMany(kvp => kvp.Value.DistinctBy(m => m.download?.First())
                                                                   .Select(m => (File:   kvp.Key,
                                                                                 Module: m)))
-                                      .ToGroupedDictionary(tuple => Cache.IsMaybeCachedZip(tuple.Module));
+                                      .ToGroupedDictionary(tuple => Cache.IsMaybeCachedZip(tuple.Module)
+                                                                    // Overwrite if different size
+                                                                    && Cache.GetCachedFilename(tuple.Module) is string cachedPath
+                                                                    && new FileInfo(cachedPath).Length == tuple.File.Length);
             if (cachedGroups.TryGetValue(true, out (FileInfo File, CkanModule Module)[]? alreadyStored))
             {
                 // Notify about files that are already cached
@@ -184,7 +190,7 @@ namespace CKAN.IO
             // CkanModule.download is required for cache management, set a default if missing
             foreach (var ckan in internalCkans)
             {
-                ckan["download"] ??= $"https://ckan/imported-from-zip/{ckan["identifier"]}/{zip.Name}";
+                ckan["download"] ??= $"https://ckan/imported-from-zip/{ckan["identifier"]}/{Path.GetFileName(zip.Name)}";
             }
             // Set the version and compatibility if we can
             foreach (var grp in internalCkans.GroupBy(ckan => (string?)ckan["$vref"] ?? ""))
