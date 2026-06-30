@@ -119,7 +119,11 @@ namespace CKAN.GUI
             StatusInstanceLabel.ScaleFonts();
             StatusProgress.ScaleFonts();
             minimizedContextMenuStrip.ScaleFonts();
-            this.ScaleFonts();
+            if (Platform.IsMono)
+            {
+                // This breaks ModInfo scaling on Windows
+                this.ScaleFonts();
+            }
             // React when the user clicks a tag or filter link in mod info
             ModInfo.OnChangeFilter += ManageMods.Filter;
             ModInfo.ModuleDoubleClicked += ManageMods.ResetFilterAndSelectModOnList;
@@ -998,6 +1002,7 @@ namespace CKAN.GUI
                 }
 
                 CurrentInstance.PlayGame(command,
+                                         currentUser,
                                          () =>
                                          {
                                              ManageMods.OnGameExit();

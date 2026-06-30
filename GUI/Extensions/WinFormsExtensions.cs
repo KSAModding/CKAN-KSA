@@ -71,6 +71,20 @@ namespace CKAN.GUI
                     strip.ScaleToolTipFonts();
                 }
             }
+            else if (Util.TextScaleFactor is not 1f and var factor)
+            {
+                if (control is Form)
+                {
+                    control.SuspendLayout();
+                    control.Scale(new SizeF(factor, factor));
+                    control.ResumeLayout(true);
+                }
+                if (control is ToolStrip or ProgressBar or Label or TreeView)
+                {
+                    control.Font = new Font(control.Font.FontFamily,
+                                            control.Font.Size * factor);
+                }
+            }
         }
 
         public static void ScaleFonts(this ToolStripItem item)
@@ -80,6 +94,11 @@ namespace CKAN.GUI
                 && dpi != 96)
             {
                 item.Font = item.Font.Scale(dpi);
+            }
+            else if (Util.TextScaleFactor is not 1f and var factor)
+            {
+                item.Font = new Font(item.Font.FontFamily,
+                                     item.Font.Size * factor);
             }
         }
 
@@ -168,6 +187,22 @@ namespace CKAN.GUI
                 {
                     yield return piece;
                 }
+            }
+        }
+
+        public static void SelectRows(this DataGridView grid, int start, int end)
+        {
+            for (int row = start; row <= end; ++row)
+            {
+                grid.Rows[row].Selected = true;
+            }
+        }
+
+        public static void SelectRows(this DataGridView grid, IEnumerable<DataGridViewRow> rows)
+        {
+            foreach (var r in rows.Where(r => r.DataGridView == grid))
+            {
+                r.Selected = true;
             }
         }
     }

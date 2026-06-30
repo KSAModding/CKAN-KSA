@@ -24,7 +24,7 @@ namespace CKAN.CmdLine
         {
             ListOptions options = (ListOptions) raw_options;
 
-            var regMgr   = RegistryManager.Instance(instance, repoData);
+            var regMgr   = RegistryManager.Instance(instance, repoData, headless: user.Headless);
             var registry = regMgr.registry;
 
             ExportFileType? exportFileType = null;
@@ -60,11 +60,9 @@ namespace CKAN.CmdLine
             if (exportFileType == null)
             {
                 var installed = new SortedDictionary<string, ModuleVersion>(registry.Installed());
-                var upgradeable = registry
-                                  .CheckUpgradeable(instance, new HashSet<string>())
-                                  [true]
-                                  .Select(m => m.identifier)
-                                  .ToHashSet();
+                var upgradeable = registry.UpgradeableModules(instance, new HashSet<string>())
+                                          .Select(m => m.identifier)
+                                          .ToHashSet();
 
                 foreach (KeyValuePair<string, ModuleVersion> mod in installed)
                 {

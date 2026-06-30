@@ -34,7 +34,10 @@ namespace CKAN.GUI
             {
                 ModGrid.BorderStyle = BorderStyle.None;
             }
-            uninstallingFont = new Font(ModGrid.Font, FontStyle.Strikeout);
+            uninstallingStyle = new DataGridViewCellStyle()
+            {
+                Font = new Font(ModGrid.Font, FontStyle.Strikeout),
+            };
 
             ToolTip.SetToolTip(InstallAllCheckbox, Properties.Resources.ManageModsInstallAllCheckboxTooltip);
             ToolTip.ScaleFonts();
@@ -48,6 +51,7 @@ namespace CKAN.GUI
             FilterNotInstalledButton.ToolTipText    = Properties.Resources.FilterLinkToolTip;
             FilterIncompatibleButton.ToolTipText    = Properties.Resources.FilterLinkToolTip;
 
+            Toolbar.GotFocus += new EventHandler((sender, args) => ModGrid.Select());
             FilterToolButton.MouseHover += (sender, args) => FilterToolButton.ShowDropDown();
             ApplyToolButton.MouseHover += (sender, args) => ApplyToolButton.ShowDropDown();
             ApplyToolButton.Enabled = false;
@@ -57,6 +61,27 @@ namespace CKAN.GUI
                                                                      (sender, e) => false,
                                                                      (sender, e) => Util.Invoke(this, () => ModGrid_SelectionChanged(sender, e)),
                                                                      100));
+
+            ModGrid.Resize += new EventHandler(Util.Debounce<EventArgs>(
+                                  (sender, e) => Util.Invoke(this, () =>
+                                  {
+                                      // Expand/contract large columns to use the available space efficiently
+                                      ModName.AutoSizeMode       = DataGridViewAutoSizeColumnMode.Fill;
+                                      Author.AutoSizeMode        = DataGridViewAutoSizeColumnMode.Fill;
+                                      LatestVersion.AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+                                      Description.AutoSizeMode   = DataGridViewAutoSizeColumnMode.Fill;
+                                  }),
+                                  (sender, e) => false,
+                                  (sender, e) => false,
+                                  (sender, e) => Util.Invoke(this, () =>
+                                  {
+                                      // Now make them resizable again
+                                      ModName.AutoSizeMode       = DataGridViewAutoSizeColumnMode.NotSet;
+                                      Author.AutoSizeMode        = DataGridViewAutoSizeColumnMode.NotSet;
+                                      LatestVersion.AutoSizeMode = DataGridViewAutoSizeColumnMode.NotSet;
+                                      Description.AutoSizeMode   = DataGridViewAutoSizeColumnMode.NotSet;
+                                  }),
+                                  250));
 
             repoData = ServiceLocator.Container.Resolve<RepositoryDataManager>();
 
@@ -91,11 +116,11 @@ namespace CKAN.GUI
             var g = CreateGraphics();
             ModGrid.ColumnHeadersHeight = ModGrid.Columns.OfType<DataGridViewColumn>().Max(col =>
                 ModGrid.ColumnHeadersDefaultCellStyle.Padding.Vertical
-                + Util.StringHeight(g, col.HeaderText,
-                                    col.HeaderCell?.Style?.Font
-                                                  ?? ModGrid.ColumnHeadersDefaultCellStyle.Font
-                                                  ?? SystemFonts.DefaultFont,
-                                    col.Width - (2 * ModGrid.ColumnHeadersDefaultCellStyle.Padding.Horizontal)));
+                + g.StringHeight(col.HeaderText,
+                                 col.HeaderCell?.Style?.Font
+                                               ?? ModGrid.ColumnHeadersDefaultCellStyle.Font
+                                               ?? SystemFonts.DefaultFont,
+                                 col.Width - (2 * ModGrid.ColumnHeadersDefaultCellStyle.Padding.Horizontal)));
         }
 
         private static readonly ILog log = LogManager.GetLogger(typeof(ManageMods));
@@ -103,7 +128,7 @@ namespace CKAN.GUI
         private DateTime lastSearchTime;
         private string? lastSearchKey;
         private readonly NavigationHistory<GUIMod> navHistory;
-        private readonly Font uninstallingFont;
+        private readonly DataGridViewCellStyle uninstallingStyle;
 
         private List<ModChange>?            currentChangeSet;
         private Dictionary<GUIMod, string>? conflicts;
@@ -213,12 +238,12 @@ namespace CKAN.GUI
                         if (removing.Contains(ident))
                         {
                             // Set strikeout font for rows being uninstalled
-                            row.DefaultCellStyle.Font = uninstallingFont;
+                            row.DefaultCellStyle = uninstallingStyle;
                         }
-                        else if (row.DefaultCellStyle.Font != null)
+                        else if (row.DefaultCellStyle == uninstallingStyle)
                         {
                             // Clear strikeout font for rows not being uninstalled
-                            row.DefaultCellStyle.Font = ModGrid.DefaultCellStyle.Font;
+                            row.DefaultCellStyle = null;
                         }
                     }
                 }
@@ -287,7 +312,8 @@ namespace CKAN.GUI
                 && ModGrid.Rows.Contains(row)
                 && row.Index >= 0)
             {
-                foreach (DataGridViewCell cell in row.Cells)
+                foreach (var cell in row.Cells.OfType<DataGridViewCell>()
+                                              .Where(c => c.ColumnIndex != Description.Index))
                 {
                     cell.ToolTipText = tooltip;
                 }
@@ -769,6 +795,17 @@ namespace CKAN.GUI
             }
         }
 
+        private void ModGrid_DataError(object? sender, DataGridViewDataErrorEventArgs e)
+        {
+            // The grid sometimes raises this after a column becomes visible when some of its cells have null values.
+            // Log and ignore it.
+            log.Debug(string.Format("ModGrid_DataError: row {0}, col {1}, value {2}",
+                                    ModGrid.Rows[e.RowIndex].Tag,
+                                    ModGrid.Columns[e.ColumnIndex].HeaderText,
+                                    Utilities.DefaultIfThrows(() => ModGrid.Rows[e.RowIndex].Cells[e.ColumnIndex])?.Value),
+                      e.Exception);
+        }
+
         private void ShowHeaderContextMenu(bool columns = true,
                                            bool tags    = true)
         {
@@ -866,9 +903,19 @@ namespace CKAN.GUI
         /// </summary>
         private void ModGrid_KeyDown(object? sender, KeyEventArgs? e)
         {
-            switch (e?.KeyCode)
+            switch (e)
             {
-                case Keys.Home:
+                case { KeyCode: Keys.A, Control: true}:
+                    for (int row = 0; row <  ModGrid.Rows.Count; ++row)
+                    {
+                        ModGrid.Rows[row].Selected = true;
+                    }
+                    e.Handled = true;
+                    break;
+
+                case { KeyCode: Keys.Home, Control: var c, Shift: var s }:
+                    var origSel1 = ModGrid.SelectedRows.OfType<DataGridViewRow>().ToArray();
+                    var bottomRow = ModGrid.CurrentRow;
                     // First row.
                     // Handles for empty filters
                     if (//ModGrid.Rows is [DataGridViewRow top, ..]
@@ -877,11 +924,20 @@ namespace CKAN.GUI
                     {
                         ModGrid.CurrentCell = top.Cells[SelectableColumnIndex()];
                     }
-
+                    if (s && bottomRow is { Index: int maxIndex })
+                    {
+                        ModGrid.SelectRows(0, maxIndex);
+                    }
+                    if (c)
+                    {
+                        ModGrid.SelectRows(origSel1);
+                    }
                     e.Handled = true;
                     break;
 
-                case Keys.End:
+                case { KeyCode: Keys.End, Control: var c, Shift: var s }:
+                    var origSel2 = ModGrid.SelectedRows.OfType<DataGridViewRow>().ToArray();
+                    var topRow = ModGrid.CurrentRow;
                     // Last row.
                     // Handles for empty filters
                     if (//ModGrid.Rows is [.., DataGridViewRow bottom]
@@ -890,11 +946,18 @@ namespace CKAN.GUI
                     {
                         ModGrid.CurrentCell = bottom.Cells[SelectableColumnIndex()];
                     }
-
+                    if (s && topRow is { Index: int minIndex })
+                    {
+                        ModGrid.SelectRows(minIndex, ModGrid.Rows.Count - 1);
+                    }
+                    if (c)
+                    {
+                        ModGrid.SelectRows(origSel2);
+                    }
                     e.Handled = true;
                     break;
 
-                case Keys.Space:
+                case { KeyCode: Keys.Space }:
                     // If they've selected one row and focused one of the checkbox columns,
                     // don't intercept
                     if (ModGrid.SelectedRows   is { Count: > 1 }
@@ -926,7 +989,7 @@ namespace CKAN.GUI
                     }
                     break;
 
-                case Keys.Apps:
+                case { KeyCode: Keys.Apps }:
                     ShowModContextMenu();
                     e.Handled = true;
                     break;
@@ -942,18 +1005,13 @@ namespace CKAN.GUI
         /// </summary>
         private void ModGrid_KeyPress(object? sender, KeyPressEventArgs? e)
         {
-            if (e != null)
+            // Only search for letters and numbers
+            if (e is { KeyChar: char c }
+                && c.ToString() is string key
+                && !CkanModule.nonAlphaNumsAnyLanguage.IsMatch(key))
             {
-                // Don't search for spaces or newlines
-                if (e.KeyChar is ((char)Keys.Space) or ((char)Keys.Enter))
-                {
-                    return;
-                }
-
-                var key = e.KeyChar.ToString();
                 // Determine time passed since last key press.
-                TimeSpan interval = DateTime.Now - lastSearchTime;
-                if (interval.TotalSeconds < 1)
+                if (DateTime.Now - lastSearchTime is { TotalSeconds: < 1 })
                 {
                     // Last keypress was < 1 sec ago, so combine the last and current keys.
                     key = lastSearchKey + key;
@@ -1297,14 +1355,14 @@ namespace CKAN.GUI
             if (freezeChangeSet)
             {
                 // Already frozen by some outer block, let it handle the cleanup
-                action?.Invoke();
+                action.Invoke();
             }
             else
             {
                 freezeChangeSet = true;
                 try
                 {
-                    action?.Invoke();
+                    action.Invoke();
                 }
                 finally
                 {
@@ -1704,11 +1762,20 @@ namespace CKAN.GUI
 
             UpdateFilters();
 
-            // Hide update and replacement columns if not needed.
-            // Write it to the configuration, else they are hidden again after a filter change.
-            // After the update / replacement, they are hidden again.
             Util.Invoke(ModGrid, () =>
             {
+                // Fit small columns to their contents at load
+                ModGrid.AutoResizeColumn(InstalledVersion.Index,  DataGridViewAutoSizeColumnMode.AllCellsExceptHeader);
+                ModGrid.AutoResizeColumn(GameCompatibility.Index, DataGridViewAutoSizeColumnMode.AllCellsExceptHeader);
+                ModGrid.AutoResizeColumn(DownloadSize.Index,      DataGridViewAutoSizeColumnMode.AllCellsExceptHeader);
+                ModGrid.AutoResizeColumn(InstallSize.Index,       DataGridViewAutoSizeColumnMode.AllCellsExceptHeader);
+                ModGrid.AutoResizeColumn(ReleaseDate.Index,       DataGridViewAutoSizeColumnMode.AllCellsExceptHeader);
+                ModGrid.AutoResizeColumn(InstallDate.Index,       DataGridViewAutoSizeColumnMode.AllCellsExceptHeader);
+                ModGrid.AutoResizeColumn(DownloadCount.Index,     DataGridViewAutoSizeColumnMode.AllCellsExceptHeader);
+
+                // Hide update and replacement columns if not needed.
+                // Write it to the configuration, else they are hidden again after a filter change.
+                // After the update / replacement, they are hidden again.
                 UpdateCol.Visible  = has_unheld_updates;
                 ReplaceCol.Visible = MainModList.Modules.Any(mod => mod.IsInstalled && mod.HasReplacement);
             });
@@ -2250,7 +2317,7 @@ namespace CKAN.GUI
             {
                 RaiseError?.Invoke(k.Message);
                 var identifiers = k.unsatisfied
-                                   .SelectMany(uns => uns.Select(rr => rr.source.identifier))
+                                   .SelectMany(uns => uns.depends.Select(rr => rr.source.identifier))
                                    .Distinct();
 
                 foreach (var ident in identifiers)

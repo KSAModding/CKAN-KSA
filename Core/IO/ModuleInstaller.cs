@@ -1007,19 +1007,20 @@ namespace CKAN.IO
                 // before parents. GH #78.
                 foreach (string directory in directoriesToDelete.OrderByDescending(dir => dir.Length))
                 {
+                    var relPath = instance.ToRelativeGameDir(directory);
                     log.DebugFormat("Checking {0}...", directory);
                     // It is bad if any of this directories gets removed
                     // So we protect them
                     // A few string comparisons will be cheaper than hitting the disk, so do this first
-                    if (instance.Game.IsReservedDirectory(instance, directory))
+                    if (instance.Game.IsReservedDirectory(instance, directory)
+                        || instance.Game.StockFolders.Contains(relPath))
                     {
                         log.DebugFormat("Directory {0} is reserved, skipping", directory);
                         continue;
                     }
 
                     // See what's left in this folder and what we can do about it
-                    GroupFilesByRemovable(instance.ToRelativeGameDir(directory),
-                                          registry, modFiles, instance.Game,
+                    GroupFilesByRemovable(relPath, registry, modFiles, instance.Game,
                                           (Directory.Exists(directory)
                                               ? Directory.EnumerateFileSystemEntries(directory, "*", SearchOption.AllDirectories)
                                               : Enumerable.Empty<string>())
@@ -1129,53 +1130,47 @@ namespace CKAN.IO
         /// </summary>
         /// <param name="directories">The collection of directory path strings to examine</param>
         public HashSet<string> AddParentDirectories(HashSet<string> directories)
-        {
-            var gameDir = CKANPathUtils.NormalizePath(instance.GameDir);
-            return directories
-                .Where(dir => !string.IsNullOrWhiteSpace(dir))
-                // Normalize all paths before deduplicate
-                .Select(CKANPathUtils.NormalizePath)
-                // Remove any duplicate paths
-                .Distinct()
-                .SelectMany(dir =>
-                {
-                    var results = new HashSet<string>(Platform.PathComparer);
-                    // Adding in the DirectorySeparatorChar fixes attempts on Windows
-                    // to parse "X:" which resolves to Environment.CurrentDirectory
-                    var dirInfo = new DirectoryInfo(
-                        dir.EndsWith("/") ? dir : dir + Path.DirectorySeparatorChar);
+            => directories.Where(dir => dir is { Length: > 0 })
+                          // Normalize all paths before deduplicate
+                          .Select(CKANPathUtils.NormalizePath)
+                          // Remove any duplicate paths
+                          .Distinct()
+                          .SelectMany(dir =>
+                          {
+                              var results = new HashSet<string>(Platform.PathComparer);
+                              // Adding in the DirectorySeparatorChar fixes attempts on Windows
+                              // to parse "X:" which resolves to Environment.CurrentDirectory
+                              var dirInfo = new DirectoryInfo(
+                                  dir.EndsWith("/") ? dir : dir + Path.DirectorySeparatorChar);
 
-                    // If this is a parentless directory (Windows)
-                    // or if the Root equals the current directory (Mono)
-                    if (dirInfo.Parent == null || dirInfo.Root == dirInfo)
-                    {
-                        return results;
-                    }
+                              // If this is a parentless directory (Windows)
+                              // or if the Root equals the current directory (Mono)
+                              if (dirInfo.Parent == null || dirInfo.Root == dirInfo)
+                              {
+                                  return results;
+                              }
 
-                    if (!dir.StartsWith(gameDir, Platform.PathComparison))
-                    {
-                        dir = CKANPathUtils.ToAbsolute(dir, gameDir);
-                    }
+                              if (!dir.StartsWith(instance.GameDir, Platform.PathComparison))
+                              {
+                                  dir = CKANPathUtils.ToAbsolute(dir, instance.GameDir);
+                              }
 
-                    // Remove the system paths, leaving the path under the instance directory
-                    var relativeHead = CKANPathUtils.ToRelative(dir, gameDir);
-                    // Don't try to remove GameRoot
-                    if (!string.IsNullOrEmpty(relativeHead))
-                    {
-                        var pathArray = relativeHead.Split('/');
-                        var builtPath = "";
-                        foreach (var path in pathArray)
-                        {
-                            builtPath += path + '/';
-                            results.Add(CKANPathUtils.ToAbsolute(builtPath, gameDir));
-                        }
-                    }
-
-                    return results;
-                })
-                .Where(dir => !instance.Game.IsReservedDirectory(instance, dir))
-                .ToHashSet();
-        }
+                              for (var builtPath = CKANPathUtils.ToRelative(dir, instance.GameDir);
+                                   // Don't try to remove GameRoot
+                                   builtPath is { Length: > 0 };
+                                   builtPath = Path.GetDirectoryName(builtPath))
+                              {
+                                  if (instance.Game.StockFolders.Contains(builtPath))
+                                  {
+                                      // Can't delete this, no point in checking parent either
+                                      break;
+                                  }
+                                  results.Add(CKANPathUtils.ToAbsolute(builtPath, instance.GameDir));
+                              }
+                              return results;
+                          })
+                          .Where(dir => !instance.Game.IsReservedDirectory(instance, dir))
+                          .ToHashSet();
 
         #endregion
 
@@ -1665,8 +1660,8 @@ namespace CKAN.IO
                                              recommenders.Concat(recommendations.Keys)
                                                          .Concat(suggestions.Keys))
                                  .Where(kvp => !exclude.Contains(kvp.Key)
-                                               && CanInstall(toInstall.Append(kvp.Key).ToList(),
-                                                          opts, registry, instance.Game, crit))
+                                               && CanInstall(toInstall.Append(kvp.Key).ToList(), toRemove,
+                                                             opts, registry, instance.Game, crit))
                                  .ToDictionary();
 
             return recommendations.Count > 0
@@ -1680,6 +1675,7 @@ namespace CKAN.IO
         /// </summary>
         /// <param name="opts">Installer options</param>
         /// <param name="toInstall">Mods we want to install</param>
+        /// <param name="toRemove">Mods we want to uninstall</param>
         /// <param name="registry">Registry of instance into which we want to install</param>
         /// <param name="game">Game instance</param>
         /// <param name="crit">Game version criteria</param>
@@ -1687,6 +1683,7 @@ namespace CKAN.IO
         /// True if it's possible to install these mods, false otherwise
         /// </returns>
         public static bool CanInstall(IReadOnlyCollection<CkanModule> toInstall,
+                                      IReadOnlyCollection<CkanModule> toRemove,
                                       RelationshipResolverOptions     opts,
                                       IRegistryQuerier                registry,
                                       IGame                           game,
@@ -1695,37 +1692,28 @@ namespace CKAN.IO
             string request = string.Join(", ", toInstall.Select(m => m.identifier));
             try
             {
-                var installed = toInstall.Select(m => registry.InstalledModule(m.identifier)?.Module)
-                                         .OfType<CkanModule>();
-                var resolver = new RelationshipResolver(toInstall, installed, opts, registry, game, crit);
-
+                var resolver = new RelationshipResolver(toInstall, toRemove,
+                                                        opts, registry, game, crit);
                 var resolverModList = resolver.ModList(false).ToArray();
                 if (resolverModList.Length >= toInstall.Count(m => !m.IsMetapackage))
                 {
                     // We can install with no further dependencies
-                    string recipe = string.Join(", ", resolverModList.Select(m => m.identifier));
-                    log.Debug($"Installable: {request}: {recipe}");
+                    log.DebugFormat("Installable: {0}: {1}",
+                                    request, string.Join(", ", resolverModList.Select(m => m.identifier)));
                     return true;
                 }
                 else
                 {
-                    log.DebugFormat("Can't install {0}: {1}", request, string.Join("; ", resolver.ConflictDescriptions));
+                    log.DebugFormat("Can't install {0}: {1}",
+                                    request, string.Join("; ", resolver.ConflictDescriptions));
                     return false;
                 }
             }
             catch (TooManyModsProvideKraken k)
             {
                 // One of the dependencies is virtual
-                foreach (var mod in k.modules)
-                {
-                    // Try each option recursively to see if any are successful
-                    if (CanInstall(toInstall.Append(mod).ToArray(), opts, registry, game, crit))
-                    {
-                        // Child call will emit debug output, so we don't need to here
-                        return true;
-                    }
-                }
-                log.Debug($"Can't install {request}: Can't install provider of {k.requested}");
+                return k.modules.Any(mod => CanInstall(toInstall.Append(mod).ToArray(), toRemove,
+                                                       opts, registry, game, crit));
             }
             catch (InconsistentKraken k)
             {
