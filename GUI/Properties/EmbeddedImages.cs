@@ -38,6 +38,7 @@ namespace CKAN.GUI
         public static Bitmap folderZip            => get("folderZip", Platform.IsWindows);
         public static Bitmap forward              => get("forward");
         public static Bitmap info                 => get("info", Platform.IsWindows);
+        public static Bitmap ksa                  => get("ksa");
         public static Bitmap ksp                  => get("ksp");
         public static Bitmap refresh              => get("refresh");
         public static Bitmap refreshStale         => get("refreshStale");

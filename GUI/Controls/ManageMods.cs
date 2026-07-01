@@ -2253,6 +2253,11 @@ namespace CKAN.GUI
             Conflicts = null;
             ChangeSet = null;
             ModGrid.CurrentCell = null;
+            LaunchGameToolStripMenuItem.Image = currentInstance?.Game.ShortName switch
+            {
+                "KSA" => EmbeddedImages.ksa,
+                _     => EmbeddedImages.ksp,
+            };
             SetPlayButtonActiveInactive(false);
         }
 
