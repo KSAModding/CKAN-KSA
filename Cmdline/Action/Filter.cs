@@ -311,7 +311,7 @@ namespace CKAN.CmdLine
     internal class FilterListOptions : InstanceSpecificOptions
     {
         [Option("game", DefaultValue = null,
-                HelpText = "The game for which to list global filters, either KSP or KSP2")]
+                HelpText = "The game for which to list global filters, one of KSP, KSP2, or KSA")]
         public string? gameId { get; set; }
     }
 
@@ -321,7 +321,7 @@ namespace CKAN.CmdLine
         public bool global { get; set; }
 
         [Option("game", DefaultValue = null,
-                HelpText = "The game for which to set global filters, either KSP or KSP2")]
+                HelpText = "The game for which to set global filters, one of KSP, KSP2, or KSA")]
         public string? gameId { get; set; }
 
         [ValueList(typeof(List<string>))]
@@ -334,7 +334,7 @@ namespace CKAN.CmdLine
         public bool global { get; set; }
 
         [Option("game", DefaultValue = null,
-                HelpText = "The game for which to remove global filters, either KSP or KSP2")]
+                HelpText = "The game for which to remove global filters, one of KSP, KSP2, or KSA")]
         public string? gameId { get; set; }
 
         [ValueList(typeof(List<string>))]
