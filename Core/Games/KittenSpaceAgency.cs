@@ -168,11 +168,11 @@ namespace CKAN.Games.KittenSpaceAgency
         {
             "KSA.exe"
         };
-        public Uri DefaultRepositoryURL => new Uri("https://github.com/KSP-CKAN/KSA-CKAN-meta/archive/main.tar.gz");
+        public Uri DefaultRepositoryURL => new Uri("https://github.com/KSAModding/KSA-CKAN-meta/archive/main.tar.gz");
 
-        public Uri RepositoryListURL => new Uri("https://raw.githubusercontent.com/KSP-CKAN/KSA-CKAN-meta/main/repositories.json");
+        public Uri RepositoryListURL => new Uri("https://raw.githubusercontent.com/KSAModding/KSA-CKAN-meta/main/repositories.json");
 
-        public Uri MetadataBugtrackerURL => new Uri("https://github.com/KSP-CKAN/KSA-NetKAN/issues/new/choose");
+        public Uri MetadataBugtrackerURL => new Uri("https://github.com/KSAModding/KSA-NetKAN/issues/new/choose");
 
         public Uri DiscordURL => new Uri("https://discord.gg/kittenspaceagency");
 
