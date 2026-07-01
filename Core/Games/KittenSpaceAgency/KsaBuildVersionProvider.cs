@@ -22,7 +22,7 @@ namespace CKAN.Games.KittenSpaceAgency
         private static string? GetLatestBuildValue(DirectoryInfo root)
         {
             var versionsDir = new DirectoryInfo(
-                Path.Combine(root.FullName, "content", "Versions")
+                Path.Combine(root.FullName, "Content", "Versions")
             );
 
             if (!versionsDir.Exists)
