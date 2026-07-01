@@ -42,12 +42,14 @@ namespace Tests.Core.Converters
             var deserialized = JsonConvert.DeserializeObject<ChangedJson>(json)!;
 
             // Assert
-            CollectionAssert.AreEquivalent(new string[] { "KSP", "KSP2" },
+            CollectionAssert.AreEquivalent(new string[] { "KSP", "KSP2", "KSA" },
                                            deserialized.GlobalInstallFilters?.Keys);
             CollectionAssert.AreEquivalent(new string[] { "value1", "value2" },
                                            deserialized.GlobalInstallFilters?["KSP"]);
             CollectionAssert.AreEquivalent(new string[] { "value1", "value2" },
                                            deserialized.GlobalInstallFilters?["KSP2"]);
+            CollectionAssert.AreEquivalent(new string[] { "value1", "value2" },
+                                           deserialized.GlobalInstallFilters?["KSA"]);
         }
     }
 }
