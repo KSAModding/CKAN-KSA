@@ -65,7 +65,7 @@ namespace CKAN.CmdLine
                 {
                     // First the commands with three string arguments
                     case "fake":
-                        yield return $"{Properties.Resources.Usage}: ckan instance {verb} [{Properties.Resources.Options}] name path version [--game KSP|KSP2] [--MakingHistory <version>] [--BreakingGround <version>]";
+                        yield return $"{Properties.Resources.Usage}: ckan instance {verb} [{Properties.Resources.Options}] name path version [--game KSP|KSP2|KSA] [--MakingHistory <version>] [--BreakingGround <version>]";
                         break;
 
                     case "clone":
@@ -142,7 +142,7 @@ namespace CKAN.CmdLine
         [ValueOption(1)] public string? path { get; set; }
         [ValueOption(2)] public string? version { get; set; }
 
-        [Option("game", DefaultValue = "KSP", HelpText = "The game of the instance to be faked, either KSP or KSP2")]
+        [Option("game", DefaultValue = "KSP", HelpText = "The game of the instance to be faked, one of KSP, KSP2, or KSA")]
         public string? gameId { get; set; }
 
         [Option("MakingHistory", DefaultValue = "none", HelpText = "The version of the Making History DLC to be faked.")]

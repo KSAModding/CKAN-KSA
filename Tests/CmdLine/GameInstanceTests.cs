@@ -553,7 +553,7 @@ namespace Tests.CmdLine
                   new string[]
                   {
                       "instance fake - Fake a game instance",
-                      "Usage: ckan instance fake [options] name path version [--game KSP|KSP2] [--MakingHistory <version>] [--BreakingGround <version>]",
+                      "Usage: ckan instance fake [options] name path version [--game KSP|KSP2|KSA] [--MakingHistory <version>] [--BreakingGround <version>]",
                   }),
         ]
         public void RunSubCommand_NoArguments_PrintsHelp(string verb, string[] help)
