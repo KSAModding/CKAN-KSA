@@ -6,7 +6,6 @@ using System.Linq;
 using System.Reflection;
 using Autofac;
 using CKAN.DLC;
-using CKAN.Games.KerbalSpaceProgram.GameVersionProviders;
 using CKAN.IO;
 using CKAN.Versioning;
 using log4net;
@@ -69,6 +68,7 @@ namespace CKAN.Games.KittenSpaceAgency
         
         public string[] LeaveEmptyInClones => Array.Empty<string>();
         public string[] ReservedPaths => Array.Empty<string>();
+        public string[] CreateableInstallTos => Array.Empty<string>();
         public string[] CreateableDirs => Array.Empty<string>();
         public string[] AutoRemovableDirs => Array.Empty<string>();
 
@@ -127,20 +127,14 @@ namespace CKAN.Games.KittenSpaceAgency
         
         public GameVersion[] EmbeddedGameVersions
         => (Assembly.GetExecutingAssembly()
-                    .GetManifestResourceStream("CKAN.builds-ksp.json")
+                    .GetManifestResourceStream("CKAN.builds-ksa.json")
                         is Stream s
-                    ? JsonConvert.DeserializeObject<JBuilds>(
-                    new StreamReader(s).ReadToEnd())
-                        : null)
-                        ?.Builds
-                        ?.Select(b => GameVersion.Parse(b.Value))
-                        .ToArray()
-                        ?? Array.Empty<GameVersion>();
+                    ? JsonConvert.DeserializeObject<GameVersion[]>(
+                        new StreamReader(s).ReadToEnd())
+                    : null)
+                ?? Array.Empty<GameVersion>();
         public GameVersion[] ParseBuildsJson(JToken json)
-            => json.ToObject<JBuilds>()
-                   ?.Builds
-                   ?.Select(b => GameVersion.Parse(b.Value))
-                   .ToArray()
+            => json.ToObject<GameVersion[]>()
                ?? Array.Empty<GameVersion>();
 
         public GameVersion? DetectVersion(DirectoryInfo where)
@@ -179,6 +173,8 @@ namespace CKAN.Games.KittenSpaceAgency
         public Uri RepositoryListURL => new Uri("https://raw.githubusercontent.com/KSP-CKAN/KSA-CKAN-meta/main/repositories.json");
 
         public Uri MetadataBugtrackerURL => new Uri("https://github.com/KSP-CKAN/KSA-NetKAN/issues/new/choose");
+
+        public Uri DiscordURL => new Uri("https://discord.gg/kittenspaceagency");
 
         public Uri ModSupportURL => new Uri("https://forums.ahwoo.com/forums/guides-and-help.19");
 
