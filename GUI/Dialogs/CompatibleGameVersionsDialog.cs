@@ -125,7 +125,9 @@ namespace CKAN.GUI
             foreach (var version in versions.Where(v => v != _inst.Version())
                                             .Reverse())
             {
-                SelectedVersionsCheckedListBox.Items.Add(version, compatibleVersions.Contains(version));
+                SelectedVersionsCheckedListBox.Items.Add(
+                    new DisplayVersion(version, _inst.Game.FormatVersion(version)),
+                    compatibleVersions.Contains(version));
             }
         }
 
@@ -147,7 +149,8 @@ namespace CKAN.GUI
             try
             {
                 var version = GameVersion.Parse(AddVersionToListTextBox.Text);
-                SelectedVersionsCheckedListBox.Items.Insert(0, version);
+                SelectedVersionsCheckedListBox.Items.Insert(
+                    0, new DisplayVersion(version, _inst.Game.FormatVersion(version)));
             }
             catch (FormatException)
             {
@@ -177,11 +180,31 @@ namespace CKAN.GUI
         private void SaveButton_Click(object? sender, EventArgs? e)
         {
             _inst.SetCompatibleVersions(SelectedVersionsCheckedListBox.CheckedItems
-                                                                      .Cast<GameVersion>()
+                                                                      .Cast<DisplayVersion>()
+                                                                      .Select(dv => dv.Version)
                                                                       .ToList());
 
             DialogResult = DialogResult.OK;
             Close();
+        }
+
+        /// <summary>
+        /// Wraps a <see cref="GameVersion"/> for the checked-list so the row shows the
+        /// game-specific display string (for example KSA's <c>year.month.*</c>) while the
+        /// real version is still read back on save.
+        /// </summary>
+        private sealed class DisplayVersion
+        {
+            public GameVersion Version { get; }
+            private readonly string text;
+
+            public DisplayVersion(GameVersion version, string text)
+            {
+                Version   = version;
+                this.text = text;
+            }
+
+            public override string ToString() => text;
         }
     }
 }

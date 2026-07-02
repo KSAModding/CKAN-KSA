@@ -56,6 +56,12 @@ namespace CKAN.Games
         GameVersion[]     ParseBuildsJson(JToken json);
         GameVersion?      DetectVersion(DirectoryInfo where);
         GameVersion[]     DefaultCompatibleVersions(GameVersion installedVersion);
+
+        // Format a game version for display in the compatible-versions UI.
+        // Most games use the plain version string; KSA renders a month-granular
+        // year.month value as year.month.* to show it matches any revision that month.
+        string            FormatVersion(GameVersion v);
+
         string            CompatibleVersionsFile { get; }
         string[]          InstanceAnchorFiles { get; }
 

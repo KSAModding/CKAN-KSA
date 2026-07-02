@@ -225,6 +225,8 @@ namespace CKAN.Games.KerbalSpaceProgram2
                          .Select(minor => new GameVersion(0, minor))
                          .ToArray();
 
+        public string FormatVersion(GameVersion v) => v.ToString() ?? "";
+
         public string CompatibleVersionsFile => "compatible_game_versions.json";
 
         public string[] InstanceAnchorFiles =>
