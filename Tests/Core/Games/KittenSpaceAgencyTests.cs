@@ -239,7 +239,7 @@ namespace Tests.Core.Games
         [Test]
         public void AdjustCommandLine_NoStarMap_LaunchesKSAUnchanged()
         {
-            // no StarMap.exe under the mod root, launch line stays as-is
+            // no StarMap.Loader.exe under the mod root, launch line stays as-is
             var args = new[] { "KSA.exe", "-single-instance" };
 
             var adjusted = new KittenSpaceAgency().AdjustCommandLine(args, tempDir, fakeGameDir);
@@ -345,7 +345,7 @@ namespace Tests.Core.Games
         {
             var starMapDir = Path.Combine(tempDir, StarMapTestFolder);
             Directory.CreateDirectory(starMapDir);
-            var starMapExe = Path.Combine(starMapDir, "StarMap.exe");
+            var starMapExe = Path.Combine(starMapDir, "StarMap.Loader.exe");
             File.WriteAllText(starMapExe, "");
             return starMapExe;
         }

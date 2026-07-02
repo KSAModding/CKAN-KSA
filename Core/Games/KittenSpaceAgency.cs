@@ -127,7 +127,7 @@ namespace CKAN.Games.KittenSpaceAgency
         // (StarMapLauncher-0.4.5 as of writing) so we scan for the exe by
         // name instead of assuming a fixed folder. If it's not there we just
         // launch KSA.exe like before.
-        private const string StarMapExeName    = "StarMap.exe";
+        private const string StarMapExeName    = "StarMap.Loader.exe";
         private const string StarMapConfigName = "StarMapConfig.json";
 
         public string[] AdjustCommandLine(string[] args, GameVersion? installedVersion, GameInstance inst)
