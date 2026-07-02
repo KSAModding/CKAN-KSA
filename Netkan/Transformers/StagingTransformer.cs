@@ -6,6 +6,7 @@ using log4net;
 
 using CKAN.Versioning;
 using CKAN.Games;
+using CKAN.Games.KittenSpaceAgency;
 using CKAN.NetKAN.Model;
 
 namespace CKAN.NetKAN.Transformers
@@ -39,6 +40,15 @@ namespace CKAN.NetKAN.Transformers
             var maxStr = json["ksp_version_max"] ?? json["ksp_version"];
             var minVer = (string?)minStr is string s1 ? GameVersion.Parse(s1) : GameVersion.Any;
             var maxVer = (string?)maxStr is string s2 ? GameVersion.Parse(s2) : GameVersion.Any;
+            // KSA's build counter is non-monotonic and is normalized to 0 in the build
+            // map, so normalize the module's declared versions the same way before the
+            // check; otherwise a raw hard-coded version (e.g. 2026.6.9.4750) would look
+            // incompatible with the normalized current release (2026.6.0.4750).
+            if (game is KittenSpaceAgency)
+            {
+                minVer = KittenSpaceAgency.NormalizeBuildCounter(minVer);
+                maxVer = KittenSpaceAgency.NormalizeBuildCounter(maxVer);
+            }
             if (currentRelease != null && currentRelease.IntersectWith(new GameVersionRange(minVer, maxVer)) == null)
             {
                 reason = $"Hard-coded game versions not compatible with current release: {GameVersionRange.VersionSpan(game, minVer, maxVer)}\r\nPlease check that they match the forum thread.";

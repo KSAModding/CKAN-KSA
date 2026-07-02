@@ -52,6 +52,17 @@ namespace Tests.NetKAN.Validators
             );
         }
 
+        [Test,
+            TestCase(boringModule, "2026.6.0.4750"),   // KSA revision-range form (build counter pinned to 0)
+            TestCase(boringModule, "2026.6.9.4750"),    // 4-part with a build counter
+            TestCase(boringModule, "1.12.1"),           // still accepts <= 3 parts
+        ]
+        public void Validate_FourPartKspVersion_DoesNotThrow(string json, string kspVersion)
+        {
+            Assert.DoesNotThrow(
+                () => TryModule(json, null, "ksp_version", new JValue(kspVersion)));
+        }
+
         public void Validate_InstallToGameDataSlashmods_DoesNotThrow()
         {
             Assert.DoesNotThrow(
