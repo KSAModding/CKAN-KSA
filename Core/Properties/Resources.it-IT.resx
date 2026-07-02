@@ -456,26 +456,17 @@ Sovrascrivere?</value>
   <data name="ModuleInstallerAboutToUpgrade" xml:space="preserve">
     <value>Stai per aggiornare:</value>
   </data>
-  <data name="ModuleInstallerUpgradeInstallingResuming" xml:space="preserve">
-    <value> * Installa: {0} {1} ({2}, {3} rimanenti)</value>
-  </data>
-  <data name="ModuleInstallerUpgradeInstallingUncached" xml:space="preserve">
-    <value> * Installa: {0} {1} ({2}, {3} rimanenti)</value>
-  </data>
-  <data name="ModuleInstallerUpgradeInstallingCached" xml:space="preserve">
-    <value> * Installazione: {0} {1} (in cache)</value>
+  <data name="ModuleInstallerUpgradeInstalling" xml:space="preserve">
+    <value> * Installa: {0}</value>
   </data>
   <data name="ModuleInstallerUpgradeReinstalling" xml:space="preserve">
-    <value> * Reinstallazione: {0} {1}</value>
+    <value> * Reinstallazione: {0}</value>
   </data>
   <data name="ModuleInstallerUpgradeDowngrading" xml:space="preserve">
     <value> * Downgrade: {0} da {1} a {2}</value>
   </data>
-  <data name="ModuleInstallerUpgradeUpgradingUncached" xml:space="preserve">
-    <value> * Aggiornamento: {0} {1} a {2} ({3}, {4})</value>
-  </data>
-  <data name="ModuleInstallerUpgradeUpgradingCached" xml:space="preserve">
-    <value> * Aggiornamento: {0} {1} a {2} (in cache)</value>
+  <data name="ModuleInstallerUpgradeUpgrading" xml:space="preserve">
+    <value> * Aggiornamento: {0} {1} a {2}</value>
   </data>
   <data name="ModuleInstallerUpgradeAutoRemoving" xml:space="preserve">
     <value> * Rimozione automatica: {0} {1}</value>
@@ -701,9 +692,6 @@ Libera spazio su quel dispositivo o modifica le impostazioni per utilizzare un'a
   </data>
   <data name="NetModuleCacheModuleResuming" xml:space="preserve">
     <value>{0} {1} ({2}, {3} rimanenti)</value>
-  </data>
-  <data name="ModuleInstallerUpgradeUpgradingResuming" xml:space="preserve">
-    <value> * Aggiorna: {0} {1} a {2} ({3}, {4} rimanenti)</value>
   </data>
   <data name="ModpackName" xml:space="preserve">
     <value>installata-{0}</value>

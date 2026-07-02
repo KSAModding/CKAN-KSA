@@ -37,7 +37,7 @@ namespace CKAN.GUI
         public GameInstance? CurrentInstance => Manager.CurrentInstance;
         private readonly RepositoryDataManager repoData;
         private readonly string? userAgent;
-        private readonly AutoUpdate updater = new AutoUpdate();
+        private readonly AutoUpdate updater;
         public bool Waiting => Wait.Busy;
 
         // Stuff we set when the game instance changes
@@ -129,6 +129,7 @@ namespace CKAN.GUI
             ModInfo.ModuleDoubleClicked += ManageMods.ResetFilterAndSelectModOnList;
             repoData = ServiceLocator.Container.Resolve<RepositoryDataManager>();
             this.userAgent = userAgent;
+            updater = new AutoUpdate(userAgent);
 
             Instance = this;
 
@@ -718,6 +719,7 @@ namespace CKAN.GUI
 
             var installed = registry_manager.registry.InstalledModules.Select(inst => inst.Module).ToList();
             var toInstall = new List<CkanModule>();
+            bool? overrideVersions = null;
             foreach (string path in files)
             {
                 CkanModule module;
@@ -727,6 +729,21 @@ namespace CKAN.GUI
                     module = CkanModule.FromFile(path);
                     if (module.IsMetapackage && module.depends != null)
                     {
+                        if (module.depends.OfType<ModuleRelationshipDescriptor>()
+                                  .Where(rel => rel.version != null)
+                                  .ToArray()
+                            is { Length: > 0 } versionSpecificRels)
+                        {
+                            if (overrideVersions ??= YesNoDialog(Properties.Resources.MetapackageRelationshipVersionsPrompt,
+                                                                 Properties.Resources.MetapackagePurgeRelationshipVersions,
+                                                                 Properties.Resources.MetapackageKeepRelationshipVersions))
+                            {
+                                foreach (var rel in versionSpecificRels)
+                                {
+                                    rel.version = null;
+                                }
+                            }
+                        }
                         // Add metapackage dependencies to the changeset so we can skip compat checks for them
                         toInstall.AddRange(module.depends
                             .Where(rel => !rel.MatchesAny(installed, null, null))
@@ -760,9 +777,8 @@ namespace CKAN.GUI
                 }
             }
 
-            var modpacks = toInstall.Where(m => m.IsMetapackage)
-                                    .ToArray();
-            if (modpacks is { Length: > 0 })
+            if (toInstall.Where(m => m.IsMetapackage).ToArray()
+                is { Length: > 0 } modpacks)
             {
                 CkanModule.GetMinMaxVersions(modpacks,
                                              out _, out _,
@@ -771,15 +787,15 @@ namespace CKAN.GUI
                                                       maxGame ?? GameVersion.Any);
                 var instRanges = crit.Versions.Select(gv => gv.ToVersionRange())
                                               .ToList();
-                var missing = CurrentInstance.Game
-                                             .KnownVersions
-                                             .Where(gv => filesRange.Contains(gv)
-                                                          && !instRanges.Any(ir => ir.Contains(gv)))
-                                             // Use broad Major.Minor group for each specific version
-                                             .Select(gv => new GameVersion(gv.Major, gv.Minor))
-                                             .Distinct()
-                                             .ToList();
-                if (missing.Count != 0
+                if (CurrentInstance.Game
+                                   .KnownVersions
+                                   .Where(gv => filesRange.Contains(gv)
+                                                && !instRanges.Any(ir => ir.Contains(gv)))
+                                   // Use broad Major.Minor group for each specific version
+                                   .Select(gv => new GameVersion(gv.Major, gv.Minor))
+                                   .Distinct()
+                                   .ToList()
+                    is { Count: > 0 } missing
                     && YesNoDialog(string.Format(Properties.Resources.MetapackageAddCompatibilityPrompt,
                                                  filesRange.ToSummaryString(CurrentInstance.Game),
                                                  crit.ToSummaryString(CurrentInstance.Game)),

@@ -486,26 +486,17 @@ Remplacer ?</value>
   <data name="ModuleInstallerAboutToUpgrade" xml:space="preserve">
     <value>Vont être mis à jour :</value>
   </data>
-  <data name="ModuleInstallerUpgradeInstallingResuming" xml:space="preserve">
-    <value> * Installation : {0} {1} ({2}, {3} restant)</value>
-  </data>
-  <data name="ModuleInstallerUpgradeInstallingUncached" xml:space="preserve">
-    <value> * Installation : {0} {1} ({2}, {3})</value>
-  </data>
-  <data name="ModuleInstallerUpgradeInstallingCached" xml:space="preserve">
-    <value> * Installation : {0} {1} (en cache)</value>
+  <data name="ModuleInstallerUpgradeInstalling" xml:space="preserve">
+    <value> * Installation : {0}</value>
   </data>
   <data name="ModuleInstallerUpgradeReinstalling" xml:space="preserve">
-    <value> * Réinstallation : {0} {1}</value>
+    <value> * Réinstallation : {0}</value>
   </data>
   <data name="ModuleInstallerUpgradeDowngrading" xml:space="preserve">
     <value> * Rétrogradation : {0} de {1} vers {2}</value>
   </data>
-  <data name="ModuleInstallerUpgradeUpgradingUncached" xml:space="preserve">
-    <value> * Mise à jour : {0} {1} vers {2} ({3}, {4})</value>
-  </data>
-  <data name="ModuleInstallerUpgradeUpgradingCached" xml:space="preserve">
-    <value> * Mise à jour : {0} {1} vers {2} (en cache)</value>
+  <data name="ModuleInstallerUpgradeUpgrading" xml:space="preserve">
+    <value> * Mise à jour : {0} {1} vers {2}</value>
   </data>
   <data name="ModuleInstallerUpgradeAutoRemoving" xml:space="preserve">
     <value> * Suppression automatique : {0} {1}</value>
@@ -633,7 +624,7 @@ Consultez cette page pour obtenir de l'aide :
   <data name="KrakenAlreadyRunning" xml:space="preserve">
     <value>Fichier verrou avec un ID de processus actif à {0}
 
-Un autre processus CKAN est probablement déjà en train d'accéder à ce dossier de jeu. Si vous êtes sûr que ce fichier verrou est périmé, vous pouvez supprimer ce fichier pour continuer. Mais si ce n'est pas le cas, les deux CKAN risque de rentrer en conflit et corrompre votre registre de mods et votre dossier de jeu. 
+Un autre processus CKAN est probablement déjà en train d'accéder à ce dossier de jeu. Si vous êtes sûr que ce fichier verrou est périmé, vous pouvez supprimer ce fichier pour continuer. Mais si ce n'est pas le cas, les deux CKAN risque de rentrer en conflit et corrompre votre registre de mods et votre dossier de jeu.
 
 Voulez-vous supprimez ce fichier verrou pour forcer l'accès ?</value>
   </data>
@@ -722,9 +713,6 @@ Libérez de l'espace sur cet appareil ou modifiez vos paramètres pour utiliser 
   </data>
   <data name="NetModuleCacheModuleResuming" xml:space="preserve">
     <value>{0} {1} ({2}, {3} restant)</value>
-  </data>
-  <data name="ModuleInstallerUpgradeUpgradingResuming" xml:space="preserve">
-    <value> * Mise à jour : {0} {1} vers {2} ({3}, {4} restant)</value>
   </data>
   <data name="ModpackName" xml:space="preserve">
     <value>installé-{0}</value>

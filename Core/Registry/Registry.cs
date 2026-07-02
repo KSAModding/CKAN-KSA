@@ -1166,14 +1166,13 @@ namespace CKAN
             IDictionary<string, UnmanagedModuleVersion> dlc,
             Func<RelationshipDescriptor, bool>?         satisfiedFilter = null)
         {
-            log.DebugFormat("Finding reverse dependencies of: {0}", string.Join(", ", modulesToRemove));
-            log.DebugFormat("From installed mods: {0}", string.Join(", ", origInstalled));
-            log.DebugFormat("Installing mods: {0}", string.Join(", ", modulesToInstall));
-
             // The empty list has no reverse dependencies
             // (Don't remove broken modules if we're only installing)
             if (modulesToRemove.Count != 0)
             {
+                log.DebugFormat("Finding reverse dependencies of: {0}", string.Join(", ", modulesToRemove));
+                log.DebugFormat("From installed mods: {0}", string.Join(", ", origInstalled));
+                log.DebugFormat("Installing mods: {0}", string.Join(", ", modulesToInstall));
                 // All modules in the input are included in the output
                 foreach (var starter in modulesToRemove)
                 {

@@ -481,8 +481,8 @@ namespace CKAN
                              // Resolve ties in name order
                              .ThenBy(m => m.name);
 
-        public bool ReadyToInstall(CkanModule                      mod,
-                                   IReadOnlyCollection<CkanModule> installed)
+        public bool ReadyToInstall(CkanModule       mod,
+                                   ISet<CkanModule> installed)
             => !modlist.Values.Distinct()
                               .Where(m => m != mod)
                               .Except(installed)

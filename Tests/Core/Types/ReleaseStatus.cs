@@ -2,6 +2,8 @@ using NUnit.Framework;
 
 using CKAN;
 
+using Tests.Core.Relationships;
+
 namespace Tests.Core.Types
 {
     [TestFixture]
@@ -18,7 +20,7 @@ namespace Tests.Core.Types
             Assert.DoesNotThrow(() =>
             {
                 var module = CkanModule.FromJson(
-                    Relationships.RelationshipResolverTests.MergeWithDefaults(
+                    RelationshipResolverTests.MergeWithDefaults(
                         $@"{{
                             ""identifier"": ""aMod"",
                             ""release_status"": ""{status}""
@@ -38,7 +40,7 @@ namespace Tests.Core.Types
             Assert.Throws<BadMetadataKraken>(delegate
             {
                 var module = CkanModule.FromJson(
-                    Relationships.RelationshipResolverTests.MergeWithDefaults(
+                    RelationshipResolverTests.MergeWithDefaults(
                         $@"{{
                             ""identifier"": ""aMod"",
                             ""release_status"": ""{status}""
@@ -53,7 +55,7 @@ namespace Tests.Core.Types
             Assert.DoesNotThrow(() =>
             {
                 var module = CkanModule.FromJson(
-                    Relationships.RelationshipResolverTests.MergeWithDefaults(
+                    RelationshipResolverTests.MergeWithDefaults(
                         $@"{{
                             ""identifier"": ""aMod""
                         }}"));
@@ -68,7 +70,7 @@ namespace Tests.Core.Types
             Assert.DoesNotThrow(() =>
             {
                 var module = CkanModule.FromJson(
-                    Relationships.RelationshipResolverTests.MergeWithDefaults(
+                    RelationshipResolverTests.MergeWithDefaults(
                         $@"{{
                             ""identifier"": ""aMod"",
                             ""release_status"": null

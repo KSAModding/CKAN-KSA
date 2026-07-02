@@ -53,14 +53,14 @@ namespace CKAN.Games.KerbalSpaceProgram.GameVersionProviders
             }
         }
 
-        public List<GameVersion> KnownVersions
+        public GameVersion[] KnownVersions
         {
             get
             {
                 EnsureBuildMap();
                 return _jBuilds?.Builds?.Select(b => GameVersion.Parse(b.Value))
-                                        .ToList()
-                               ?? new List<GameVersion>();
+                                        .ToArray()
+                               ?? Array.Empty<GameVersion>();
             }
         }
 

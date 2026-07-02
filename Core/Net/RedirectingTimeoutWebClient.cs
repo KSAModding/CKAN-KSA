@@ -41,7 +41,7 @@ namespace CKAN
             Headers.Add("User-Agent", userAgent);
             if (!string.IsNullOrEmpty(mimeType))
             {
-                log.InfoFormat("Setting MIME type {0}", mimeType);
+                log.DebugFormat("Setting MIME type {0}", mimeType);
                 Headers.Add("Accept", mimeType);
             }
             if (permanentRedirects.TryGetValue(address, out Uri? redirUri))

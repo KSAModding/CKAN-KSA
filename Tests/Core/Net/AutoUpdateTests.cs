@@ -28,7 +28,7 @@ namespace Tests.Core.Net.AutoUpdateTests
                                                   | SecurityProtocolType.Tls13;
             #pragma warning restore SYSLIB0014
 
-            var updater = new AutoUpdate();
+            var updater = new AutoUpdate(null);
             var update  = updater.GetUpdate(devBuild);
 
             // Is is a *really* basic test to just make sure we get release info

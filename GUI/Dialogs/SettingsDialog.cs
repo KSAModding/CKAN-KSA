@@ -699,13 +699,12 @@ namespace CKAN.GUI
 
         #region CKAN updates
 
-        private void UpdateAutoUpdate()
+        private void UpdateAutoUpdate(bool bypassCache = false)
         {
             LocalVersionLabel.Text = Meta.GetVersion();
             try
             {
-                if (updater.GetUpdate(coreConfig.DevBuilds ?? false,
-                                      userAgent)
+                if (updater.GetUpdate(coreConfig.DevBuilds ?? false, bypassCache)
                            .Version
                     is CkanModuleVersion latestVersion)
                 {
@@ -728,7 +727,7 @@ namespace CKAN.GUI
         {
             try
             {
-                UpdateAutoUpdate();
+                UpdateAutoUpdate(true);
             }
             catch (Exception exc)
             {

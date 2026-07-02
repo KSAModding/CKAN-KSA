@@ -98,7 +98,7 @@ namespace CKAN
                 // Tell the server what kind of files we want
                 if (!string.IsNullOrEmpty(mimeType))
                 {
-                    log.InfoFormat("Setting MIME type {0}", mimeType);
+                    log.DebugFormat("Setting MIME type {0}", mimeType);
                     agent.Headers.Add("Accept", mimeType);
                 }
 

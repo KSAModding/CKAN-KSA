@@ -756,7 +756,7 @@ namespace Tests.Core.IO
         {
             // Arrange
             var crit = new GameVersionCriteria(new GameVersion(1, 12, 5));
-            using (var repo     = new TemporaryRepository(availableModules.Select(Relationships.RelationshipResolverTests.MergeWithDefaults)
+            using (var repo     = new TemporaryRepository(availableModules.Select(RelationshipResolverTests.MergeWithDefaults)
                                                                           .ToArray()))
             using (var repoData = new TemporaryRepositoryData(nullUser, repo.repo))
             using (var inst     = new DisposableKSP())
@@ -806,7 +806,7 @@ namespace Tests.Core.IO
         {
             // Arrange
             var crit = new GameVersionCriteria(new GameVersion(1, 12, 5));
-            using (var repo     = new TemporaryRepository(availableModules.Select(Relationships.RelationshipResolverTests.MergeWithDefaults)
+            using (var repo     = new TemporaryRepository(availableModules.Select(RelationshipResolverTests.MergeWithDefaults)
                                                                           .ToArray()))
             using (var repoData = new TemporaryRepositoryData(nullUser, repo.repo))
             using (var inst     = new DisposableKSP())
@@ -844,7 +844,7 @@ namespace Tests.Core.IO
             // Arrange
             using (var inst     = new DisposableKSP())
             using (var repo     = new TemporaryRepository(
-                                      Relationships.RelationshipResolverTests.MergeWithDefaults(
+                                      RelationshipResolverTests.MergeWithDefaults(
                                           @"{
                                               ""identifier"": ""InstallingMod"",
                                               ""suggests"": [ { ""name"": ""SuggestedMod"" } ]
@@ -904,7 +904,7 @@ namespace Tests.Core.IO
             // Arrange
             using (var inst     = new DisposableKSP())
             using (var repo     = new TemporaryRepository(
-                                      Relationships.RelationshipResolverTests.MergeWithDefaults(
+                                      RelationshipResolverTests.MergeWithDefaults(
                                           @"{
                                               ""identifier"": ""Parallax"",
                                               ""depends"": [ { ""name"": ""ParallaxTextures"" } ]
@@ -1051,7 +1051,7 @@ namespace Tests.Core.IO
         {
             // Arrange
             using (var inst     = new DisposableKSP())
-            using (var repo     = new TemporaryRepository(Relationships.RelationshipResolverTests
+            using (var repo     = new TemporaryRepository(RelationshipResolverTests
                                                                        .MergeWithDefaults(availableModules)
                                                                        .ToArray()))
             using (var repoData = new TemporaryRepositoryData(nullUser, repo.repo))
@@ -1902,7 +1902,7 @@ namespace Tests.Core.IO
                 HashSet<string>? possibleConfigOnlyDirs = null;
                 installer.Upgrade(new CkanModule[] { module },
                                   new NetAsyncModulesDownloader(nullUser, cache),
-                                  ref possibleConfigOnlyDirs,regMgr,
+                                  ref possibleConfigOnlyDirs, regMgr,
                                   null, null,
                                   new HashSet<CkanModule> { module });
 
@@ -1915,6 +1915,64 @@ namespace Tests.Core.IO
                                                new DirectoryInfo(gameDataPath).EnumerateFileSystemInfos()
                                                                               .Select(fsi => fsi.FullName)
                                                                               .Select(CKANPathUtils.NormalizePath));
+            }
+        }
+
+        [Test]
+        public void Upgrade_WithSkipFiles_DependingModsUpgraded()
+        {
+            // Arrange
+            using (var inst     = new DisposableKSP())
+            using (var config   = new FakeConfiguration(inst.KSP, inst.KSP.Name))
+            using (var cacheDir = new TemporaryDirectory())
+            using (var cache    = new NetModuleCache(cacheDir))
+            using (var server   = DogeCoinFlagServer())
+            using (var repo     = new TemporaryRepository(RelationshipResolverTests.MergeWithDefaults(
+                                      @"{
+                                          ""identifier"": ""A"",
+                                          ""version"":    ""1.0""
+                                      }",
+                                      @"{
+                                          ""identifier"": ""B"",
+                                          ""version"":    ""1.0"",
+                                          ""depends"": [ { ""name"": ""A"" } ]
+                                      }",
+                                      $@"{{
+                                          ""identifier"": ""B"",
+                                          ""version"":    ""2.0"",
+                                          ""depends"": [ {{ ""name"": ""A"" }} ],
+                                          ""install"": [ {{
+                                              ""find"": ""DogeCoinFlag"",
+                                              ""install_to"": ""GameData""
+                                          }} ],
+                                          ""download"":   ""{server.Url}/DogeCoinFlag-1.01.zip""
+                                      }}"
+                                  ).ToArray()))
+            using (var repoData = new TemporaryRepositoryData(nullUser, repo.repo))
+            using (var regMgr   = RegistryManager.Instance(inst.KSP, repoData.Manager,
+                                                           new Repository[] { repo.repo }))
+            {
+                var installer = new ModuleInstaller(inst.KSP, cache, config, nullUser);
+                var registry = regMgr.registry;
+                var ver1 = new ModuleVersion("1.0");
+                var ver2 = new ModuleVersion("2.0");
+                var modA  = registry.GetModuleByVersion("A", ver1)!;
+                var modB1 = registry.GetModuleByVersion("B", ver1)!;
+                var modB2 = registry.GetModuleByVersion("B", ver2)!;
+                registry.RegisterModule(modA,  Array.Empty<string>(), inst.KSP, false);
+                registry.RegisterModule(modB1, Array.Empty<string>(), inst.KSP, false);
+
+                // Act / Assert
+                HashSet<string>? possibleConfigOnlyDirs = null;
+                Assert.DoesNotThrow(() => installer.Upgrade(
+                                              new CkanModule[] { modA, modB2 },
+                                              new NetAsyncModulesDownloader(nullUser, cache),
+                                              ref possibleConfigOnlyDirs, regMgr,
+                                              null, null,
+                                              new HashSet<CkanModule> { modA }));
+
+                // Assert
+                Assert.AreEqual(ver2, registry.InstalledModule("B")!.Module.version);
             }
         }
 
@@ -2370,7 +2428,7 @@ namespace Tests.Core.IO
             // Arrange
             using (var inst     = new DisposableKSP("TestInstance", new KerbalSpaceProgram2()))
             using (var config   = new FakeConfiguration(inst.KSP, inst.KSP.Name))
-            using (var repo     = new TemporaryRepository(Relationships.RelationshipResolverTests.MergeWithDefaults(
+            using (var repo     = new TemporaryRepository(RelationshipResolverTests.MergeWithDefaults(
                                       @"{
                                           ""identifier"": ""SpaceWarp"",
                                           ""install"": [

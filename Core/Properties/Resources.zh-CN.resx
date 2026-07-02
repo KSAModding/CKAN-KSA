@@ -486,26 +486,17 @@
   <data name="ModuleInstallerAboutToUpgrade" xml:space="preserve">
     <value>中止升级:</value>
   </data>
-  <data name="ModuleInstallerUpgradeInstallingResuming" xml:space="preserve">
-    <value> * 安装: {0} {1} ({2}, {3} 剩余)</value>
-  </data>
-  <data name="ModuleInstallerUpgradeInstallingUncached" xml:space="preserve">
-    <value> * 安装: {0} {1} ({2}，{3})</value>
-  </data>
-  <data name="ModuleInstallerUpgradeInstallingCached" xml:space="preserve">
-    <value> * 安装: {0} {1} (已缓存)</value>
+  <data name="ModuleInstallerUpgradeInstalling" xml:space="preserve">
+    <value> * 安装: {0}</value>
   </data>
   <data name="ModuleInstallerUpgradeReinstalling" xml:space="preserve">
-    <value> * 重新安装: {0} {1}</value>
+    <value> * 重新安装: {0}</value>
   </data>
   <data name="ModuleInstallerUpgradeDowngrading" xml:space="preserve">
     <value> * 降级: {0} 从 {1} 到 {2}</value>
   </data>
-  <data name="ModuleInstallerUpgradeUpgradingUncached" xml:space="preserve">
-    <value> * 升级: {0} {1} 到 {2} ({3}，{4})</value>
-  </data>
-  <data name="ModuleInstallerUpgradeUpgradingCached" xml:space="preserve">
-    <value> * 升级: {0} {1} 到 {2} (已缓存)</value>
+  <data name="ModuleInstallerUpgradeUpgrading" xml:space="preserve">
+    <value> * 升级: {0} {1} 到 {2}</value>
   </data>
   <data name="ModuleInstallerUpgradeAutoRemoving" xml:space="preserve">
     <value> * 自动移除: {0} {1}</value>
@@ -725,9 +716,6 @@ Owning Mod(已有Mod): {2}</value>
   </data>
   <data name="NetModuleCacheModuleResuming" xml:space="preserve">
     <value>{0} {1} ({2}, {3} 剩余)</value>
-  </data>
-  <data name="ModuleInstallerUpgradeUpgradingResuming" xml:space="preserve">
-    <value> * 升级: {0} {1} 到 {2} ({3}, {4} 剩余)</value>
   </data>
   <data name="ModpackName" xml:space="preserve">
     <value>已安装-{0}</value>

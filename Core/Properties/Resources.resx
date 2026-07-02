@@ -248,13 +248,10 @@ Overwrite?</value></data>
   <data name="ModuleInstallerRemovingMod" xml:space="preserve"><value>Removing {0}...</value></data>
   <data name="ModuleInstallerRemovedMod" xml:space="preserve"><value>Finished removing {0}</value></data>
   <data name="ModuleInstallerAboutToUpgrade" xml:space="preserve"><value>About to upgrade:</value></data>
-  <data name="ModuleInstallerUpgradeInstallingResuming" xml:space="preserve"><value> * Install: {0} {1} ({2}, {3} remaining)</value></data>
-  <data name="ModuleInstallerUpgradeInstallingUncached" xml:space="preserve"><value> * Install: {0} {1} ({2}, {3})</value></data>
-  <data name="ModuleInstallerUpgradeInstallingCached" xml:space="preserve"><value> * Install: {0} {1} (cached)</value></data>
-  <data name="ModuleInstallerUpgradeReinstalling" xml:space="preserve"><value> * Re-install: {0} {1}</value></data>
+  <data name="ModuleInstallerUpgradeInstalling" xml:space="preserve"><value> * Install: {0}</value></data>
+  <data name="ModuleInstallerUpgradeReinstalling" xml:space="preserve"><value> * Re-install: {0}</value></data>
   <data name="ModuleInstallerUpgradeDowngrading" xml:space="preserve"><value> * Downgrade: {0} from {1} to {2}</value></data>
-  <data name="ModuleInstallerUpgradeUpgradingUncached" xml:space="preserve"><value> * Upgrade: {0} {1} to {2} ({3}, {4})</value></data>
-  <data name="ModuleInstallerUpgradeUpgradingCached" xml:space="preserve"><value> * Upgrade: {0} {1} to {2} (cached)</value></data>
+  <data name="ModuleInstallerUpgradeUpgrading" xml:space="preserve"><value> * Upgrade: {0} {1} to {2}</value></data>
   <data name="ModuleInstallerUpgradeAutoRemoving" xml:space="preserve"><value> * Auto-remove: {0} {1}</value></data>
   <data name="ModuleInstallerUpgradeUserDeclined" xml:space="preserve"><value>User declined upgrade list</value></data>
   <data name="ModuleInstallerReplaceAutodetected" xml:space="preserve"><value>Can't replace {0} as it was not installed by CKAN.
@@ -367,7 +364,6 @@ Free up space on that device or change your settings to use another location.
   <data name="NetModuleCacheModuleCached" xml:space="preserve"><value>{0} {1} (cached)</value></data>
   <data name="NetModuleCacheModuleHostSize" xml:space="preserve"><value>{0} {1} ({2}, {3})</value></data>
   <data name="NetModuleCacheModuleResuming" xml:space="preserve"><value>{0} {1} ({2}, {3} remaining)</value></data>
-  <data name="ModuleInstallerUpgradeUpgradingResuming" xml:space="preserve"><value> * Upgrade: {0} {1} to {2} ({3}, {4} remaining)</value></data>
   <data name="ModpackName" xml:space="preserve"><value>installed-{0}</value></data>
   <data name="InstalledModuleToString" xml:space="preserve"><value>{0} (installed {1})</value></data>
   <data name="InstalledModuleToStringAutoInstalled" xml:space="preserve"><value>{0} (installed {1}, auto-installed)</value></data>

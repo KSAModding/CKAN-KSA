@@ -10,56 +10,56 @@ using CKAN.Configuration;
 using CKAN.Versioning;
 
 using Tests.Data;
+using Tests.Core.Relationships;
 
 namespace Tests.Core.Registry
 {
     [TestFixture]
     public class CompatibilitySorterTests
     {
-        [Test,
-            TestCase(new string[]
-                     {
-                         @"{
-                             ""spec_version"":    ""v1.4"",
-                             ""identifier"":      ""kOS-EVA"",
-                             ""name"":            ""kOS-EVA"",
-                             ""abstract"":        ""Addon for kOS that allows controlling a kerbal while on EVA"",
-                             ""version"":         ""0.2.0.0"",
-                             ""ksp_version_min"": ""1.8.0"",
-                             ""ksp_version_max"": ""1.12.99"",
-                             ""license"":         ""GPL-3.0"",
-                             ""download"":        ""https://github.com/"",
-                             ""depends"": [
-                                 { ""name"": ""Harmony2"" }
-                             ]
-                         }",
-                         @"{
-                             ""spec_version"": ""v1.4"",
-                             ""identifier"":   ""Harmony2"",
-                             ""name"":         ""Harmony 2"",
-                             ""abstract"":     ""A library for patching, replacing and decorating .NET and Mono methods during runtime"",
-                             ""version"":      ""2.2.1.0"",
-                             ""ksp_version_min"": ""1.8.0"",
-                             ""ksp_version_max"": ""1.12.99"",
-                             ""license"":         ""MIT"",
-                             ""download"":        ""https://spacedockinfo/""
-                         }",
-                     },
-                     new string[]
-                     {
-                         @"{
-                             ""spec_version"":    ""v1.4"",
-                             ""identifier"":      ""kOS-EVA"",
-                             ""name"":            ""kOS-EVA"",
-                             ""abstract"":        ""Addon for kOS that allows controlling a kerbal while on EVA"",
-                             ""version"":         ""0.2.0.0"",
-                             ""ksp_version_min"": ""1.8.0"",
-                             ""ksp_version_max"": ""1.12.99"",
-                             ""license"":         ""GPL-3.0"",
-                             ""download"":        ""https://github.com/""
-                         }",
-                     },
-                     "kOS-EVA"),
+        [TestCase(new string[]
+                  {
+                      @"{
+                          ""spec_version"":    ""v1.4"",
+                          ""identifier"":      ""kOS-EVA"",
+                          ""name"":            ""kOS-EVA"",
+                          ""abstract"":        ""Addon for kOS that allows controlling a kerbal while on EVA"",
+                          ""version"":         ""0.2.0.0"",
+                          ""ksp_version_min"": ""1.8.0"",
+                          ""ksp_version_max"": ""1.12.99"",
+                          ""license"":         ""GPL-3.0"",
+                          ""download"":        ""https://github.com/"",
+                          ""depends"": [
+                              { ""name"": ""Harmony2"" }
+                          ]
+                      }",
+                      @"{
+                          ""spec_version"": ""v1.4"",
+                          ""identifier"":   ""Harmony2"",
+                          ""name"":         ""Harmony 2"",
+                          ""abstract"":     ""A library for patching, replacing and decorating .NET and Mono methods during runtime"",
+                          ""version"":      ""2.2.1.0"",
+                          ""ksp_version_min"": ""1.8.0"",
+                          ""ksp_version_max"": ""1.12.99"",
+                          ""license"":         ""MIT"",
+                          ""download"":        ""https://spacedockinfo/""
+                      }",
+                  },
+                  new string[]
+                  {
+                      @"{
+                          ""spec_version"":    ""v1.4"",
+                          ""identifier"":      ""kOS-EVA"",
+                          ""name"":            ""kOS-EVA"",
+                          ""abstract"":        ""Addon for kOS that allows controlling a kerbal while on EVA"",
+                          ""version"":         ""0.2.0.0"",
+                          ""ksp_version_min"": ""1.8.0"",
+                          ""ksp_version_max"": ""1.12.99"",
+                          ""license"":         ""GPL-3.0"",
+                          ""download"":        ""https://github.com/""
+                      }",
+                  },
+                  "kOS-EVA"),
         ]
         public void Constructor_OverlappingModules_HigherPriorityOverrides(string[] modules1,
                                                                            string[] modules2,
@@ -154,6 +154,69 @@ namespace Tests.Core.Registry
                 CollectionAssert.AreEquivalent(new CkanModule[] { avail1.ByVersion(new ModuleVersion("3:1.0"))! },
                                                sorter.LatestIncompatible);
             });
+        }
+
+        [Test]
+        public void Constructor_OnlyCompatibleIsPrerelease_Incompatible()
+        {
+            // Arrange
+            var avail = new AvailableModule(
+                            "BDArmoryContinued",
+                            new string[]
+                            {
+                                @"{
+                                    ""identifier"":     ""BDArmoryContinued"",
+                                    ""version"":        ""2.0"",
+                                    ""ksp_version"":    ""1.12"",
+                                    ""release_status"": ""testing""
+                                }",
+                                @"{
+                                    ""identifier"":  ""BDArmoryContinued"",
+                                    ""version"":     ""1.1"",
+                                    ""ksp_version"": ""1.9"",
+                                }",
+                                @"{
+                                    ""identifier"":  ""BDArmoryContinued"",
+                                    ""version"":     ""1.0"",
+                                    ""ksp_version"": ""1.9"",
+                                }",
+                            }.Select(RelationshipResolverTests.MergeWithDefaults)
+                             .Select(CkanModule.FromJson)
+                             .ToArray());
+            var ident     = avail.AllAvailable().First().identifier;
+            var versCrit  = new GameVersionCriteria(GameVersion.Parse("1.12.5"));
+            var providers = new Dictionary<string, AvailableModule[]>()
+            {
+                { ident, new AvailableModule[] { avail } }
+            };
+            var allAvailable = new Dictionary<string, AvailableModule>[]
+            {
+                new Dictionary<string, AvailableModule>
+                {
+                    { ident, avail }
+                }
+            };
+            var installed = new Dictionary<string, InstalledModule>();
+            var dlls      = new Dictionary<string, string>().Keys;
+            var dlcs      = new Dictionary<string, UnmanagedModuleVersion>();
+            var stability = new StabilityToleranceConfig("");
+
+            // Act
+            var sorter = new CompatibilitySorter(stability, versCrit,
+                                                 allAvailable, providers,
+                                                 installed, dlls, dlcs);
+
+            // Assert
+            CollectionAssert.IsEmpty(sorter.Compatible,
+                                     "No compatible available modules");
+            CollectionAssert.IsEmpty(sorter.LatestCompatible,
+                                     "No latest compatible module");
+            CollectionAssert.AreEquivalent(Enumerable.Repeat(ident, 1),
+                                           sorter.Incompatible.Keys,
+                                           "Incompatible available module");
+            CollectionAssert.AreEquivalent(Enumerable.Repeat(ident, 1),
+                                           sorter.LatestIncompatible.Select(m => m.identifier),
+                                           "Incompatible latest module");
         }
     }
 }

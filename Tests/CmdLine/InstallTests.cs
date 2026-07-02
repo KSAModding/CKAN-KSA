@@ -9,6 +9,7 @@ using CKAN.CmdLine;
 
 using Tests.Data;
 using Tests.Core.Configuration;
+using Tests.Core.Relationships;
 
 namespace Tests.CmdLine
 {
@@ -174,7 +175,7 @@ namespace Tests.CmdLine
                                              return answer;
                                          });
             using (var inst     = new DisposableKSP())
-            using (var repo     = new TemporaryRepository(Core.Relationships.RelationshipResolverTests.MergeWithDefaults(
+            using (var repo     = new TemporaryRepository(RelationshipResolverTests.MergeWithDefaults(
                                       @"{
                                           ""identifier"": ""InstallingMod"",
                                           ""depends"":    [ { ""name"": ""Virtual"" } ],

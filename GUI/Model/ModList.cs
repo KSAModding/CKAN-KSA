@@ -105,22 +105,22 @@ namespace CKAN.GUI
                                                                   .ToHashSet(),
                                                          allLabels.IgnoreMissingIdentifiers(inst)
                                                                   .ToHashSet())
-                       .Select(tuple => registry.IsAutodetected(tuple.Item2.identifier)
-                                            ? new GUIMod(tuple.Item2, repoData, registry,
+                       .Select(tuple => registry.IsAutodetected(tuple.module.identifier)
+                                            ? new GUIMod(tuple.module, repoData, registry,
                                                          inst.StabilityToleranceConfig,
                                                          inst, cache, null,
                                                          hideEpochs, hideV)
                                               {
-                                                  HasUpdate = tuple.Item1,
+                                                  HasUpdate = tuple.upgradeable,
                                               }
-                                            : registry.InstalledModule(tuple.Item2.identifier)
+                                            : registry.InstalledModule(tuple.module.identifier)
                                               is InstalledModule found
                                                   ? new GUIMod(found, repoData, registry,
                                                                inst.StabilityToleranceConfig,
                                                                inst, cache, null,
                                                                hideEpochs, hideV)
                                                     {
-                                                        HasUpdate = tuple.Item1,
+                                                        HasUpdate = tuple.upgradeable,
                                                     }
                                                   : null)
                        .OfType<GUIMod>()

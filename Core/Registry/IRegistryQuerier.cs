@@ -312,9 +312,20 @@ namespace CKAN
                                                                                      module:      m)))
                                                  .ToArray();
             var partialMods     = partialSolution.Select(tuple => tuple.module).ToArray();
+            if (notUpgradeable.Where(m => !m.DependsAndConflictsOK(partialMods))
+                              .ToArray()
+                is { Length: > 0 } incompatInst)
+            {
+                log.DebugFormat("Installed {0} not compatible with partial solution, rejecting {1}",
+                                string.Join(", ", incompatInst.Select(m => m.ToString())),
+                                string.Join(", ", partialSolution.Select(m => m.ToString())));
+                yield break;
+            }
 
             if (remainingIdents.Length == 0)
             {
+                log.DebugFormat("Validating upgradability solution: {0}",
+                                string.Join(", ", partialSolution.Select(m => m.ToString())));
                 // We are a leaf node, return whatever we received if it is a valid solution
                 if (partialSolution.All(tuple => !tuple.upgradeable)
                     || Utilities.DefaultIfThrows(() =>
@@ -334,6 +345,7 @@ namespace CKAN
             }
             foreach (var ident in remainingIdents)
             {
+                var imod = querier.GetInstalledVersion(ident);
                 var otherIdents = remainingIdents.Where(i => i != ident)
                                                  .ToArray();
                 // Have to check HasUpdate again to account for the additions to partialSolution
@@ -354,12 +366,24 @@ namespace CKAN
                     {
                         yield return solution;
                     }
+                    if (imod == latest)
+                    {
+                        log.DebugFormat("Update for {0} is a re-install, skipping installed branch",
+                                        imod);
+                        continue;
+                    }
+                }
+
+                if (imod is { IsDLC: false} && !imod.DependsAndConflictsOK(partialMods))
+                {
+                    log.DebugFormat("Installed {0} not compatible with partial solution, rejecting installed branch",
+                                    imod);
+                    continue;
                 }
 
                 foreach (var solution in querier.FindUpgradeabilitySolutions(
                                              instance, otherIdents,
-                                             querier.GetInstalledVersion(ident)
-                                             is { IsDLC: false } imod
+                                             imod is { IsDLC: false }
                                                  ? partialSolution.Append((false, imod))
                                                                   .ToArray()
                                                  : partialSolution,
@@ -432,11 +456,11 @@ namespace CKAN
                                                     IGame                 game,
                                                     string                identifier)
         {
-            List<CkanModule>? releases = null;
+            CkanModule[]? releases = null;
             try
             {
                 releases = querier.AvailableByIdentifier(identifier)
-                                  .ToList();
+                                  .ToArray();
             }
             catch
             {
@@ -444,10 +468,10 @@ namespace CKAN
                 if (instMod != null)
                 {
                     releases = Enumerable.Repeat(instMod.Module, 1)
-                                         .ToList();
+                                         .ToArray();
                 }
             }
-            if (releases != null && releases.Count > 0)
+            if (releases is { Length: > 0 })
             {
                 CkanModule.GetMinMaxVersions(releases, out _, out _,
                                              out GameVersion? minKsp, out GameVersion? maxKsp);

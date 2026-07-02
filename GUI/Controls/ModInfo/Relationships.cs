@@ -79,7 +79,7 @@ namespace CKAN.GUI
         private static bool ImMyOwnGrandpa(TreeNode node)
             => node.Tag is CkanModule module
                && (node.Parent?.TraverseNodes(nd => nd.Parent)
-                               .Any(other => other.Tag == module)
+                               .Any(other => module.Equals(other.Tag))
                               ?? false);
 
         private void ReverseRelationshipsCheckbox_Click(object? sender, EventArgs? e)

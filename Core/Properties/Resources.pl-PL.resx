@@ -472,26 +472,17 @@ Nadpisać?</value>
   <data name="ModuleInstallerAboutToUpgrade" xml:space="preserve">
     <value>Zaktualizuje:</value>
   </data>
-  <data name="ModuleInstallerUpgradeInstallingResuming" xml:space="preserve">
-    <value> * Instalacja: {0} {1} ({2}, {3} pozostało)</value>
-  </data>
-  <data name="ModuleInstallerUpgradeInstallingUncached" xml:space="preserve">
-    <value> * Instalacja: {0} {1} ({2}, {3} pozostało)</value>
-  </data>
-  <data name="ModuleInstallerUpgradeInstallingCached" xml:space="preserve">
-    <value> * Instalacja: {0} {1} (zapisane na dysku)</value>
+  <data name="ModuleInstallerUpgradeInstalling" xml:space="preserve">
+    <value> * Instalacja: {0}</value>
   </data>
   <data name="ModuleInstallerUpgradeReinstalling" xml:space="preserve">
-    <value> * Zainstaluj ponownie: {0} {1}</value>
+    <value> * Zainstaluj ponownie: {0}</value>
   </data>
   <data name="ModuleInstallerUpgradeDowngrading" xml:space="preserve">
     <value> * Downgrade: {0} z {1} do {2}</value>
   </data>
-  <data name="ModuleInstallerUpgradeUpgradingUncached" xml:space="preserve">
-    <value> * Aktualizowanie: {0} {1} do {2} ({3}, {4})</value>
-  </data>
-  <data name="ModuleInstallerUpgradeUpgradingCached" xml:space="preserve">
-    <value> * Aktualizowanie: {0} {1} do {2} (zapisane na dysku)</value>
+  <data name="ModuleInstallerUpgradeUpgrading" xml:space="preserve">
+    <value> * Aktualizowanie: {0} {1} do {2}</value>
   </data>
   <data name="ModuleInstallerUpgradeAutoRemoving" xml:space="preserve">
     <value> * Automatyczne usuwanie: {0} {1}</value>
@@ -711,9 +702,6 @@ Zwolnij miejsce na tym urządzeniu lub zmień ustawienia, aby użyć innej lokal
   </data>
   <data name="NetModuleCacheModuleResuming" xml:space="preserve">
     <value>{0} {1} ({2}, {3} pozostało)</value>
-  </data>
-  <data name="ModuleInstallerUpgradeUpgradingResuming" xml:space="preserve">
-    <value> * Aktualizacja: {0} {1} do {2} ({3}, {4} pozostało)</value>
   </data>
   <data name="ModpackName" xml:space="preserve">
     <value>zainstalowano-{0}</value>

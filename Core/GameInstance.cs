@@ -71,7 +71,7 @@ namespace CKAN
         [MemberNotNull(nameof(playTime))]
         private void SetupCkanDirectories()
         {
-            log.InfoFormat("Initialising {0}", Platform.FormatPath(CkanDir));
+            log.DebugFormat("Initialising {0}", Platform.FormatPath(CkanDir));
 
             // TxFileManager knows if we are in a transaction
             var txFileMgr = new TxFileManager(CkanDir);
@@ -90,7 +90,7 @@ namespace CKAN
                 log.DebugFormat(Properties.Resources.GameInstanceCreatingDir, InstallHistoryDir);
                 txFileMgr.CreateDirectory(InstallHistoryDir);
             }
-            log.InfoFormat("Initialised {0}", Platform.FormatPath(CkanDir));
+            log.DebugFormat("Initialised {0}", Platform.FormatPath(CkanDir));
         }
 
         #endregion

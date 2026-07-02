@@ -210,6 +210,11 @@ Do you want to add the additional versions to this game instance's compatibility
 {0}
 
 Are you sure you want to install them? Cancelling will abort the entire installation.</value></data>
+  <data name="MetapackageRelationshipVersionsPrompt" xml:space="preserve"><value>Some of your chosen modpacks require certain specific versions of mods, rather than allowing all versions. If you leave it like that, you may miss out on updates for those mods. Overriding this is recommended.
+
+Do you want to override the specific-version requirements?</value></data>
+  <data name="MetapackagePurgeRelationshipVersions" xml:space="preserve"><value>Allow any mod versions</value></data>
+  <data name="MetapackageKeepRelationshipVersions" xml:space="preserve"><value>Keep the mod version requirements</value></data>
   <data name="MainChangesetUpdateSelected" xml:space="preserve"><value>Update selected by user to version {0}.</value></data>
   <data name="MainChangesetReinstallMetadataChanged" xml:space="preserve"><value>Re-install (metadata changed)</value></data>
   <data name="MainChangesetReinstallMissing" xml:space="preserve"><value>Re-install (missing folders or files)</value></data>

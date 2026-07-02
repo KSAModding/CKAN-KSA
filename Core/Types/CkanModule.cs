@@ -572,6 +572,12 @@ namespace CKAN
                 && (ReferenceEquals(this, obj)
                     || (obj.GetType() == GetType() && Equals((CkanModule)obj)));
 
+        public static bool operator ==(CkanModule? m1, CkanModule? m2)
+            => Equals(m1, m2);
+
+        public static bool operator !=(CkanModule? m1, CkanModule? m2)
+            => !Equals(m1, m2);
+
         public bool MetadataEquals(CkanModule other, out bool installedFilesChanged)
         {
             installedFilesChanged = true;

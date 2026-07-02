@@ -136,9 +136,8 @@ namespace CKAN.CmdLine
             user.RaiseMessage(Properties.Resources.UpgradeQueryingCKAN);
             try
             {
-                var upd = new AutoUpdate();
-                var update = upd.GetUpdate(config.DevBuilds ?? false,
-                                           options.NetUserAgent);
+                var upd = new AutoUpdate(options.NetUserAgent);
+                var update = upd.GetUpdate(config.DevBuilds ?? false);
                 if (update.Version is CkanModuleVersion latestVersion
                     && !latestVersion.SameClientVersion(Meta.ReleaseVersion))
                 {

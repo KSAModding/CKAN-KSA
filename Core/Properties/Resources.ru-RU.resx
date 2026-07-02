@@ -425,26 +425,17 @@
   <data name="ModuleInstallerAboutToUpgrade" xml:space="preserve">
     <value>Будут обновлены:</value>
   </data>
-  <data name="ModuleInstallerUpgradeInstallingResuming" xml:space="preserve">
-    <value> * Установка: {0} {1} ({2}, {3} осталось)</value>
-  </data>
-  <data name="ModuleInstallerUpgradeInstallingUncached" xml:space="preserve">
-    <value> * Установка: {0} {1} ({2}, {3})</value>
-  </data>
-  <data name="ModuleInstallerUpgradeInstallingCached" xml:space="preserve">
-    <value> * Установка: {0} {1} (кэшировано)</value>
+  <data name="ModuleInstallerUpgradeInstalling" xml:space="preserve">
+    <value> * Установка: {0}</value>
   </data>
   <data name="ModuleInstallerUpgradeReinstalling" xml:space="preserve">
-    <value> * Переустановка: {0} {1}</value>
+    <value> * Переустановка: {0}</value>
   </data>
   <data name="ModuleInstallerUpgradeDowngrading" xml:space="preserve">
     <value> * Откат: {0} от {1} к {2}</value>
   </data>
-  <data name="ModuleInstallerUpgradeUpgradingUncached" xml:space="preserve">
-    <value> * Обновление: {0} {1} до {2} ({3}, {4})</value>
-  </data>
-  <data name="ModuleInstallerUpgradeUpgradingCached" xml:space="preserve">
-    <value> * Обновление: {0} {1} до {2} (кэшировано)</value>
+  <data name="ModuleInstallerUpgradeUpgrading" xml:space="preserve">
+    <value> * Обновление: {0} {1} до {2}</value>
   </data>
   <data name="ModuleInstallerUpgradeUserDeclined" xml:space="preserve">
     <value>Пользователь отменил список обновления</value>
@@ -628,9 +619,6 @@ https://github.com/KSP-CKAN/CKAN/wiki/SSL-certificate-errors</value>
   </data>
   <data name="NetModuleCacheModuleResuming" xml:space="preserve">
     <value>{0} {1} ({2}, {3} осталось)</value>
-  </data>
-  <data name="ModuleInstallerUpgradeUpgradingResuming" xml:space="preserve">
-    <value> * Обновление: {0} {1} до {2} ({3}, {4} осталось)</value>
   </data>
   <data name="ModpackName" xml:space="preserve">
     <value>установлено-{0}</value>

@@ -1,10 +1,12 @@
 #if NET5_0_OR_GREATER
 using System;
 #endif
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Diagnostics;
+#if !NET5_0_OR_GREATER
 using System.Reflection;
+#endif
 using System.Diagnostics.CodeAnalysis;
 
 namespace CKAN
@@ -16,24 +18,21 @@ namespace CKAN
     [ExcludeFromCodeCoverage]
     public class AutoUpdate
     {
-        public AutoUpdate()
+        public AutoUpdate(string? userAgent)
         {
+            this.userAgent = userAgent;
         }
 
-        public CkanUpdate GetUpdate(bool devBuild, string? userAgent = null)
-        {
-            if (updates.TryGetValue(devBuild, out CkanUpdate? update))
-            {
-                return update;
-            }
-            var newUpdate = devBuild
-                ? new S3BuildCkanUpdate(null, userAgent) as CkanUpdate
-                : new GitHubReleaseCkanUpdate(null, userAgent);
-            updates.Add(devBuild, newUpdate);
-            return newUpdate;
-        }
+        public CkanUpdate GetUpdate(bool devBuild, bool bypassCache = false)
+            => bypassCache ? updates.AddOrUpdate(devBuild, GetUpdateUncached,
+                                                           (dev, upd) => GetUpdateUncached(dev))
+                           : updates.GetOrAdd(devBuild, GetUpdateUncached);
 
-        private readonly Dictionary<bool, CkanUpdate> updates = new Dictionary<bool, CkanUpdate>();
+        private CkanUpdate GetUpdateUncached(bool devBuild)
+            => devBuild ? new S3BuildCkanUpdate(null, userAgent)
+                        : new GitHubReleaseCkanUpdate(null, userAgent);
+
+        private readonly ConcurrentDictionary<bool, CkanUpdate> updates = new ConcurrentDictionary<bool, CkanUpdate>();
 
         private static string PathToRunningExe()
             #if NET5_0_OR_GREATER
@@ -63,7 +62,7 @@ namespace CKAN
         {
             var pid = Process.GetCurrentProcess().Id;
 
-            var update = GetUpdate(devBuild, userAgent);
+            var update = GetUpdate(devBuild);
 
             // download updater app and new ckan.exe
             NetAsyncDownloader.DownloadWithProgress(update.Targets, userAgent, user);
@@ -119,5 +118,7 @@ namespace CKAN
                 return false;
             }
         }
+
+        private readonly string? userAgent;
     }
 }

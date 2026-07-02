@@ -442,7 +442,7 @@ namespace CKAN.GUI
             this.InstalledVersion.Name = "InstalledVersion";
             this.InstalledVersion.ReadOnly = true;
             this.InstalledVersion.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Programmatic;
-            this.InstalledVersion.Width = 70;
+            this.InstalledVersion.Width = 90;
             resources.ApplyResources(this.InstalledVersion, "InstalledVersion");
             //
             // LatestVersion
@@ -451,7 +451,7 @@ namespace CKAN.GUI
             this.LatestVersion.Name = "LatestVersion";
             this.LatestVersion.ReadOnly = true;
             this.LatestVersion.SortMode = System.Windows.Forms.DataGridViewColumnSortMode.Programmatic;
-            this.LatestVersion.MinimumWidth = 70;
+            this.LatestVersion.MinimumWidth = 90;
             resources.ApplyResources(this.LatestVersion, "LatestVersion");
             //
             // GameCompatibility

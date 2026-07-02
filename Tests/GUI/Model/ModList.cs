@@ -70,7 +70,7 @@ namespace Tests.GUI
             using (var inst     = new DisposableKSP())
             using (var config   = new FakeConfiguration(inst.KSP, inst.KSP.Name))
             using (var repo     = new TemporaryRepository(
-                                      Core.Relationships.RelationshipResolverTests.MergeWithDefaults(
+                                      RelationshipResolverTests.MergeWithDefaults(
                                           @"{
                                               ""identifier"": ""HiddenMod"",
                                               ""tags"":       [ ""library"" ]
@@ -307,7 +307,7 @@ namespace Tests.GUI
             using (var inst     = new DisposableKSP())
             using (var config   = new FakeConfiguration(inst.KSP, inst.KSP.Name))
             using (var repo     = new TemporaryRepository(
-                                      Core.Relationships.RelationshipResolverTests.MergeWithDefaults(
+                                      RelationshipResolverTests.MergeWithDefaults(
                                           @"{
                                               ""identifier"": ""AnchorMod"",
                                               ""depends"": [
