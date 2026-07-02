@@ -4,6 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using Autofac;
 using CKAN.DLC;
 using CKAN.Extensions;
@@ -293,9 +294,165 @@ namespace CKAN.Games.KittenSpaceAgency
             {
                 log.Info("   " + installedModule.Module.name);
             }
-            //TODO: Actual construciton of manifest from dependency graph (if we need this)
+            UpdateManifestFile(installedModules.Select(im => im.identifier).ToHashSet(),
+                                manifestPath, manifestManagedModsPath);
         }
-        
+
+        // manifestPath/managedModsPath are separate args so tests can point them
+        // at temp files instead of the real Documents folder and app data.
+        //
+        // KSA reads manifest.toml at <Documents>/My Games/Kitten Space Agency/manifest.toml
+        // to decide which dropped mod folders are active on the next launch. The game
+        // auto discovers new mod folders and adds them here as disabled, so without this
+        // every mod CKAN installs would sit inactive until the user flips it on by hand.
+        internal static void UpdateManifestFile(HashSet<string> currentIdentifiers,
+                                                string           manifestPath,
+                                                string           managedModsPath)
+        {
+            try
+            {
+                var entries = File.Exists(manifestPath)
+                    ? ParseManifest(File.ReadAllText(manifestPath))
+                    : new List<ManifestModEntry>();
+                var previouslyManaged = ReadManagedMods(managedModsPath);
+
+                var updated = ReconcileManifest(entries, previouslyManaged, currentIdentifiers);
+
+                new FileInfo(manifestPath).Directory?.Create();
+                SerializeManifest(updated).WriteThroughTo(manifestPath);
+
+                new FileInfo(managedModsPath).Directory?.Create();
+                JsonConvert.SerializeObject(currentIdentifiers).WriteThroughTo(managedModsPath);
+            }
+            catch (Exception e)
+            {
+                log.WarnFormat("Could not update manifest at: {0}", manifestPath);
+                log.Debug(e);
+            }
+        }
+
+        // A malformed managed-mods file must not block every future manifest
+        // update until someone deletes it by hand, so a bad or missing file
+        // is just treated as empty.
+        internal static HashSet<string> ReadManagedMods(string managedModsPath)
+        {
+            try
+            {
+                return File.Exists(managedModsPath)
+                    ? JsonConvert.DeserializeObject<HashSet<string>>(File.ReadAllText(managedModsPath))
+                      ?? new HashSet<string>()
+                    : new HashSet<string>();
+            }
+            catch (Exception e)
+            {
+                log.WarnFormat("Could not read managed mods list at: {0}, treating as empty",
+                               managedModsPath);
+                log.Debug(e);
+                return new HashSet<string>();
+            }
+        }
+
+        private static readonly string manifestPath =
+            Path.Combine(Path.GetDirectoryName(UserModDirectory) ?? "", "manifest.toml");
+
+        // Identifiers whose manifest entry CKAN currently owns, kept in CKAN's own
+        // app data rather than in manifest.toml itself. This is how we tell "a mod
+        // CKAN used to install but has since removed" (safe to drop the entry for)
+        // apart from entries CKAN has never touched, like the game's own Core entry.
+        private static readonly string manifestManagedModsPath =
+            Path.Combine(CKANPathUtils.AppDataPath, "ksa-manifest-managed-mods.json");
+
+        // One [[mods]] entry from manifest.toml. Keys other than id and enabled are
+        // kept as raw lines so a future game update that adds fields does not lose
+        // them the next time we rewrite the file.
+        internal sealed class ManifestModEntry
+        {
+            public string Id = "";
+            public bool Enabled;
+            public List<string> ExtraLines = new List<string>();
+        }
+
+        // manifest.toml is a flat list of [[mods]] entries with id and enabled keys.
+        // Only those two keys are understood here, everything else in an entry is
+        // kept as a raw line so it round trips through SerializeManifest untouched.
+        internal static List<ManifestModEntry> ParseManifest(string text)
+        {
+            var entries = new List<ManifestModEntry>();
+            ManifestModEntry? current = null;
+            foreach (var rawLine in text.Split('\n'))
+            {
+                var line = rawLine.Trim();
+                if (line == "[[mods]]")
+                {
+                    current = new ManifestModEntry();
+                    entries.Add(current);
+                    continue;
+                }
+                var eq = line.IndexOf('=');
+                if (current == null || line.Length == 0 || eq < 1)
+                {
+                    continue;
+                }
+                var key   = line[..eq].Trim();
+                var value = line[(eq + 1)..].Trim();
+                switch (key)
+                {
+                    case "id":
+                        current.Id = value.Trim('"');
+                        break;
+                    case "enabled":
+                        current.Enabled = value == "true";
+                        break;
+                    default:
+                        current.ExtraLines.Add(line);
+                        break;
+                }
+            }
+            return entries;
+        }
+
+        internal static string SerializeManifest(IEnumerable<ManifestModEntry> entries)
+        {
+            var sb = new StringBuilder();
+            foreach (var entry in entries)
+            {
+                sb.Append("[[mods]]\n");
+                sb.Append($"id = \"{entry.Id}\"\n");
+                sb.Append($"enabled = {(entry.Enabled ? "true" : "false")}\n");
+                foreach (var extra in entry.ExtraLines)
+                {
+                    sb.Append(extra).Append('\n');
+                }
+                sb.Append('\n');
+            }
+            return sb.ToString();
+        }
+
+        // Make sure every currently installed mod has an enabled entry, and drop
+        // entries for mods CKAN used to manage that are no longer installed.
+        // Entries CKAN has never managed are left alone either way.
+        internal static List<ManifestModEntry> ReconcileManifest(
+                List<ManifestModEntry> entries,
+                HashSet<string>        previouslyManaged,
+                HashSet<string>        currentIdentifiers)
+        {
+            entries.RemoveAll(e => previouslyManaged.Contains(e.Id)
+                                   && !currentIdentifiers.Contains(e.Id));
+            foreach (var identifier in currentIdentifiers)
+            {
+                var entry = entries.Find(e => e.Id == identifier);
+                if (entry == null)
+                {
+                    entries.Add(new ManifestModEntry { Id = identifier, Enabled = true });
+                }
+                else
+                {
+                    entry.Enabled = true;
+                }
+            }
+            return entries;
+        }
+
         private static readonly ILog log = LogManager.GetLogger(typeof(KittenSpaceAgency));
     }
 }

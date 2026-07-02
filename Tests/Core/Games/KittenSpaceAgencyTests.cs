@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
@@ -10,6 +11,7 @@ using CKAN.IO;
 using CKAN.Versioning;
 using CKAN.Games.KittenSpaceAgency;
 using CKAN.Games.KerbalSpaceProgram;
+using ManifestModEntry = CKAN.Games.KittenSpaceAgency.KittenSpaceAgency.ManifestModEntry;
 
 namespace Tests.Core.Games
 {
@@ -205,6 +207,169 @@ namespace Tests.Core.Games
             Assert.AreEqual(
                 CKANPathUtils.NormalizePath(Path.Combine(inst.GameDir, "modsomething", "x")),
                 inst.ToAbsoluteGameDir("modsomething/x"));
+        }
+
+        [Test]
+        public void ParseManifest_EntryWithUnknownKey_KeepsItAsExtraLine()
+        {
+            // The game may add fields we do not understand yet. Anything besides
+            // id and enabled must survive so SerializeManifest can write it back.
+            var text = "[[mods]]\n"
+                     + "id = \"Core\"\n"
+                     + "enabled = true\n"
+                     + "version = \"1.0\"\n";
+
+            var entries = KittenSpaceAgency.ParseManifest(text);
+
+            Assert.AreEqual(1, entries.Count);
+            Assert.AreEqual("Core", entries[0].Id);
+            Assert.IsTrue(entries[0].Enabled);
+            CollectionAssert.Contains(entries[0].ExtraLines, "version = \"1.0\"");
+        }
+
+        [Test]
+        public void SerializeManifest_ParseManifest_RoundTrips()
+        {
+            var original = new List<ManifestModEntry>
+            {
+                new ManifestModEntry { Id = "Core", Enabled = true },
+                new ManifestModEntry { Id = "KSP-Redux", Enabled = false },
+            };
+
+            var reparsed = KittenSpaceAgency.ParseManifest(
+                               KittenSpaceAgency.SerializeManifest(original));
+
+            Assert.AreEqual(original.Select(e => e.Id), reparsed.Select(e => e.Id));
+            Assert.AreEqual(original.Select(e => e.Enabled), reparsed.Select(e => e.Enabled));
+        }
+
+        [Test]
+        public void ReconcileManifest_NewlyInstalledMod_AddedAsEnabled()
+        {
+            // A mod CKAN just installed has no entry yet, so one must be added
+            // and enabled, or the game leaves it inactive until the user notices.
+            var entries = new List<ManifestModEntry>
+            {
+                new ManifestModEntry { Id = "Core", Enabled = true },
+            };
+
+            var result = KittenSpaceAgency.ReconcileManifest(
+                             entries,
+                             previouslyManaged:  new HashSet<string>(),
+                             currentIdentifiers: new HashSet<string> { "KSP-Redux" });
+
+            var added = result.Single(e => e.Id == "KSP-Redux");
+            Assert.IsTrue(added.Enabled);
+            // The entry CKAN does not manage is untouched.
+            Assert.IsTrue(result.Single(e => e.Id == "Core").Enabled);
+        }
+
+        [Test]
+        public void ReconcileManifest_DisabledMod_IsFlippedToEnabled()
+        {
+            // The game auto discovers a dropped mod folder as disabled. Once CKAN
+            // is the one managing that mod, it needs to be active on next launch.
+            var entries = new List<ManifestModEntry>
+            {
+                new ManifestModEntry { Id = "KSP-Redux", Enabled = false },
+            };
+
+            var result = KittenSpaceAgency.ReconcileManifest(
+                             entries,
+                             previouslyManaged:  new HashSet<string> { "KSP-Redux" },
+                             currentIdentifiers: new HashSet<string> { "KSP-Redux" });
+
+            Assert.IsTrue(result.Single(e => e.Id == "KSP-Redux").Enabled);
+        }
+
+        [Test]
+        public void ReconcileManifest_UninstalledMod_EntryRemoved()
+        {
+            // KSP-Redux was previously installed by CKAN and is now gone. Its
+            // manifest entry must be removed, not left enabled pointing at nothing.
+            var entries = new List<ManifestModEntry>
+            {
+                new ManifestModEntry { Id = "KSP-Redux", Enabled = true },
+            };
+
+            var result = KittenSpaceAgency.ReconcileManifest(
+                             entries,
+                             previouslyManaged:  new HashSet<string> { "KSP-Redux" },
+                             currentIdentifiers: new HashSet<string>());
+
+            CollectionAssert.IsEmpty(result);
+        }
+
+        [Test]
+        public void ReconcileManifest_UnmanagedEntry_NeverRemoved()
+        {
+            // Core was never installed by CKAN, so even though it is not in
+            // currentIdentifiers, it must not be treated as removable.
+            var entries = new List<ManifestModEntry>
+            {
+                new ManifestModEntry { Id = "Core", Enabled = true },
+            };
+
+            var result = KittenSpaceAgency.ReconcileManifest(
+                             entries,
+                             previouslyManaged:  new HashSet<string>(),
+                             currentIdentifiers: new HashSet<string>());
+
+            CollectionAssert.Contains(result.Select(e => e.Id), "Core");
+        }
+
+        [Test]
+        public void ReadManagedMods_CorruptFile_ReturnsEmptyInsteadOfThrowing()
+        {
+            // A malformed managed-mods file must not permanently block manifest
+            // updates until someone deletes it by hand.
+            var path = Path.Combine(tempDir, "managed-mods.json");
+            File.WriteAllText(path, "{ not valid json");
+
+            var result = KittenSpaceAgency.ReadManagedMods(path);
+
+            CollectionAssert.IsEmpty(result);
+        }
+
+        [Test]
+        public void ReadManagedMods_MissingFile_ReturnsEmpty()
+        {
+            var result = KittenSpaceAgency.ReadManagedMods(
+                             Path.Combine(tempDir, "does-not-exist.json"));
+
+            CollectionAssert.IsEmpty(result);
+        }
+
+        [Test]
+        public void UpdateManifestFile_ParentDirMissing_CreatesItAndWrites()
+        {
+            // The game may never have run yet, so <Documents>/My Games/Kitten
+            // Space Agency/ (the manifest's parent) might not exist at all.
+            var manifestPath    = Path.Combine(tempDir, "not-yet-created", "manifest.toml");
+            var managedModsPath = Path.Combine(tempDir, "managed-mods.json");
+
+            KittenSpaceAgency.UpdateManifestFile(new HashSet<string> { "KSP-Redux" },
+                                                 manifestPath, managedModsPath);
+
+            var entries = KittenSpaceAgency.ParseManifest(File.ReadAllText(manifestPath));
+            Assert.IsTrue(entries.Single(e => e.Id == "KSP-Redux").Enabled);
+        }
+
+        [Test]
+        public void UpdateManifestFile_CorruptManagedModsFile_StillUpdatesManifest()
+        {
+            // A corrupt managed-mods file must not stop the manifest itself from
+            // being kept in sync, it should just fall back to an empty "previously
+            // managed" set for this run.
+            var manifestPath    = Path.Combine(tempDir, "manifest.toml");
+            var managedModsPath = Path.Combine(tempDir, "managed-mods.json");
+            File.WriteAllText(managedModsPath, "{ not valid json");
+
+            KittenSpaceAgency.UpdateManifestFile(new HashSet<string> { "KSP-Redux" },
+                                                 manifestPath, managedModsPath);
+
+            var entries = KittenSpaceAgency.ParseManifest(File.ReadAllText(manifestPath));
+            Assert.IsTrue(entries.Single(e => e.Id == "KSP-Redux").Enabled);
         }
 
         [Test]
