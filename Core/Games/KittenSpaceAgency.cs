@@ -38,11 +38,33 @@ namespace CKAN.Games.KittenSpaceAgency
             return null;
         }
 
-        public string PrimaryModDirectoryRelative => "Content";
+        // KSA loads mods from the user's Documents folder, which survives game
+        // updates, rather than from inside the game directory. "mods" is the
+        // relative prefix CKAN records in the registry for each installed file;
+        // it is mapped onto the external UserModDirectory (which itself ends in
+        // "mods") whenever a path is resolved. Because the mod root is outside
+        // GameDir, ModDirectoryIsExternal is true and the mapping happens in
+        // GameInstance.ToAbsoluteGameDir / ToRelativeGameDir.
+        public string PrimaryModDirectoryRelative => "mods";
         public string[] AlternateModDirectoriesRelative => Array.Empty<string>();
-        public string PrimaryModDirectory(GameInstance inst)
-            => CKANPathUtils.NormalizePath(
-                Path.Combine(inst.GameDir, PrimaryModDirectoryRelative));
+
+        // Unlike KSP1/KSP2 this absolute mod root is outside GameDir: it is the
+        // game's own recommended mods folder under the user's Documents directory,
+        // shared across all KSA instances. The inst parameter is unused because
+        // the location is user-global, matching how the game itself resolves it.
+        public string PrimaryModDirectory(GameInstance inst) => UserModDirectory;
+
+        public bool ModDirectoryIsExternal => true;
+
+        // <Documents>/My Games/Kitten Space Agency/mods, the folder the game
+        // scans for user-installed mods. Computed once because it is process
+        // stable and resolved on every path conversion. Path.GetFullPath keeps
+        // the root absolute even on an unusual profile where SpecialFolder.Personal
+        // is empty, so ToAbsoluteGameDir never trips on a non-rooted mod root.
+        private static readonly string UserModDirectory =
+            CKANPathUtils.NormalizePath(Path.GetFullPath(Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.Personal),
+                "My Games", "Kitten Space Agency", "mods")));
 
         public string[] StockFolders => new string[]
         {
@@ -70,7 +92,9 @@ namespace CKAN.Games.KittenSpaceAgency
         public string[] LeaveEmptyInClones => Array.Empty<string>();
         public string[] ReservedPaths => Array.Empty<string>();
         public string[] CreateableInstallTos => Array.Empty<string>();
-        public string[] CreateableDirs => Array.Empty<string>();
+        // Let the installer create the per-mod folders under the mod root (and the
+        // mod root itself), the same way KSP2 lists its GameData/Mods target here.
+        public string[] CreateableDirs => new string[] { "mods" };
         public string[] AutoRemovableDirs => Array.Empty<string>();
 
         public bool IsReservedDirectory(GameInstance inst, string path)

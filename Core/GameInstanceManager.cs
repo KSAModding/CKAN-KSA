@@ -339,7 +339,13 @@ namespace CKAN
 
                 // Create a game root directory, containing a GameData folder, a buildID.txt/buildID64.txt and a readme.txt
                 txFileMgr.CreateDirectory(newPath);
-                txFileMgr.CreateDirectory(Path.Combine(newPath, game.PrimaryModDirectoryRelative));
+                // For games whose mod directory lives outside GameDir (KSA), the
+                // relative "mods" prefix is not a real GameDir subfolder, so don't
+                // create a stray empty one the game never reads.
+                if (!game.ModDirectoryIsExternal)
+                {
+                    txFileMgr.CreateDirectory(Path.Combine(newPath, game.PrimaryModDirectoryRelative));
+                }
                 game.RebuildSubdirectories(newPath);
 
                 foreach (var anchor in game.InstanceAnchorFiles)

@@ -102,8 +102,12 @@ namespace CKAN.IO
             var installBytes  = modsToInstall.Sum(m => m.install_size);
             var downloadBytes = CkanModule.GroupByDownloads(downloads)
                                           .Sum(grp => grp.First().download_size);
-            CKANPathUtils.CheckFreeSpace(new DirectoryInfo(instance.GameDir),
-                                         cache.OnSameDevice(new DirectoryInfo(instance.GameDir))
+            // Measure the drive the mods actually land on, which for KSA is the
+            // external user mods folder rather than GameDir. For KSP1/KSP2 the mod
+            // directory is under GameDir, so this resolves to the same drive.
+            var modInstallDir = new DirectoryInfo(instance.Game.PrimaryModDirectory(instance));
+            CKANPathUtils.CheckFreeSpace(modInstallDir,
+                                         cache.OnSameDevice(modInstallDir)
                                              // Check for combined download+install space if same device
                                              ? downloadBytes + installBytes
                                              : installBytes,
@@ -1150,12 +1154,17 @@ namespace CKAN.IO
                                   return results;
                               }
 
-                              if (!dir.StartsWith(instance.GameDir, Platform.PathComparison))
+                              // dir may be absolute (under GameDir, or under an
+                              // external mod root for games like KSA) or relative.
+                              // Route conversions through the instance so external
+                              // mod paths map onto the PrimaryModDirectoryRelative
+                              // prefix instead of throwing on the GameDir root.
+                              if (!Path.IsPathRooted(dir))
                               {
-                                  dir = CKANPathUtils.ToAbsolute(dir, instance.GameDir);
+                                  dir = instance.ToAbsoluteGameDir(dir);
                               }
 
-                              for (var builtPath = CKANPathUtils.ToRelative(dir, instance.GameDir);
+                              for (var builtPath = instance.ToRelativeGameDir(dir);
                                    // Don't try to remove GameRoot
                                    builtPath is { Length: > 0 };
                                    builtPath = Path.GetDirectoryName(builtPath))
@@ -1165,7 +1174,7 @@ namespace CKAN.IO
                                       // Can't delete this, no point in checking parent either
                                       break;
                                   }
-                                  results.Add(CKANPathUtils.ToAbsolute(builtPath, instance.GameDir));
+                                  results.Add(instance.ToAbsoluteGameDir(builtPath));
                               }
                               return results;
                           })
@@ -1745,7 +1754,8 @@ namespace CKAN.IO
             if (toInstall.Sum(m => m.install_size) - toRemove.Sum(im => im.ActualInstallSize(instance))
                 is > 0 and var spaceDelta)
             {
-                CKANPathUtils.CheckFreeSpace(new DirectoryInfo(instance.GameDir),
+                // Mods install to the mod directory's drive (external of GameDir for KSA).
+                CKANPathUtils.CheckFreeSpace(new DirectoryInfo(instance.Game.PrimaryModDirectory(instance)),
                                              spaceDelta,
                                              Properties.Resources.NotEnoughSpaceToInstall);
             }
