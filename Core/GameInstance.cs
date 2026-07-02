@@ -395,7 +395,7 @@ namespace CKAN
         [ExcludeFromCodeCoverage]
         public void PlayGame(string command, IUser user, Action? onExit = null)
         {
-            if (Game.AdjustCommandLine(command.Split(' '), Version())
+            if (Game.AdjustCommandLine(command.Split(' '), Version(), this)
                 //is [string binary, ..] and string[] split
                 is string[] split
                 && split.Length > 0
