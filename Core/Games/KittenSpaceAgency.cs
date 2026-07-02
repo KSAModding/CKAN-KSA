@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using Autofac;
 using CKAN.DLC;
+using CKAN.Extensions;
 using CKAN.IO;
 using CKAN.Versioning;
 using log4net;
@@ -105,9 +106,30 @@ namespace CKAN.Games.KittenSpaceAgency
             => new Dictionary<string, string[]>();
         public void RefreshVersions(string? userAgent)
         {
-            //TODO: Implement
+            try
+            {
+                if (Net.DownloadText(BuildMapUri, userAgent) is string json)
+                {
+                    // Route through ParseBuildsJson so the downloaded build map has its
+                    // build counter normalized exactly like the embedded and cached maps.
+                    var parsed = ParseBuildsJson(JToken.Parse(json));
+                    if (parsed.Length > 0)
+                    {
+                        versions = parsed.ToList();
+                        new FileInfo(cachedBuildMapPath).Directory?.Create();
+                        json.WriteThroughTo(cachedBuildMapPath);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                log.WarnFormat("Could not retrieve latest build map from: {0}", BuildMapUri);
+                log.Debug(e);
+            }
         }
         
+        private static readonly Uri BuildMapUri =
+            new Uri("https://raw.githubusercontent.com/KSAModding/KSA-CKAN-meta/main/builds.json");
         private static readonly string cachedBuildMapPath =
             Path.Combine(CKANPathUtils.AppDataPath, "builds-ksa.json");
         

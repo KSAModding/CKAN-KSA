@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 
+using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 
 using CKAN.Versioning;
@@ -93,6 +94,19 @@ namespace Tests.Core.Games
 
             // Assert: the build counter is pinned to 0, the revision is preserved.
             Assert.AreEqual(GameVersion.Parse("2026.6.0.4750"), version);
+        }
+
+        [Test]
+        public void ParseBuildsJson_NormalizesBuildCounter()
+        {
+            // A build map as it arrives from RefreshVersions, with raw build counters.
+            var json = JArray.Parse("[ \"2026.6.9.4750\", \"2026.2.10.3538\" ]");
+
+            var versions = new KittenSpaceAgency().ParseBuildsJson(json);
+
+            // Build counter pinned to 0, revision preserved.
+            Assert.That(versions, Has.All.Matches<GameVersion>(v => v.Patch == 0));
+            CollectionAssert.Contains(versions, GameVersion.Parse("2026.6.0.4750"));
         }
     }
 }
