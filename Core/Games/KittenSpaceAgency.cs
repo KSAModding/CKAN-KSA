@@ -253,35 +253,61 @@ namespace CKAN.Games.KittenSpaceAgency
             {
                 log.Info("   " + installedModule.Module.name);
             }
-            UpdateManifestFile(installedModules.Select(im => im.identifier).ToHashSet());
+            UpdateManifestFile(installedModules.Select(im => im.identifier).ToHashSet(),
+                                manifestPath, manifestManagedModsPath);
         }
 
+        // manifestPath/managedModsPath are separate args so tests can point them
+        // at temp files instead of the real Documents folder and app data.
+        //
         // KSA reads manifest.toml at <Documents>/My Games/Kitten Space Agency/manifest.toml
         // to decide which dropped mod folders are active on the next launch. The game
         // auto discovers new mod folders and adds them here as disabled, so without this
         // every mod CKAN installs would sit inactive until the user flips it on by hand.
-        private static void UpdateManifestFile(HashSet<string> currentIdentifiers)
+        internal static void UpdateManifestFile(HashSet<string> currentIdentifiers,
+                                                string           manifestPath,
+                                                string           managedModsPath)
         {
             try
             {
                 var entries = File.Exists(manifestPath)
                     ? ParseManifest(File.ReadAllText(manifestPath))
                     : new List<ManifestModEntry>();
-                var previouslyManaged = File.Exists(manifestManagedModsPath)
-                    ? JsonConvert.DeserializeObject<HashSet<string>>(File.ReadAllText(manifestManagedModsPath))
-                      ?? new HashSet<string>()
-                    : new HashSet<string>();
+                var previouslyManaged = ReadManagedMods(managedModsPath);
 
                 var updated = ReconcileManifest(entries, previouslyManaged, currentIdentifiers);
 
-                File.WriteAllText(manifestPath, SerializeManifest(updated));
-                new FileInfo(manifestManagedModsPath).Directory?.Create();
-                File.WriteAllText(manifestManagedModsPath, JsonConvert.SerializeObject(currentIdentifiers));
+                new FileInfo(manifestPath).Directory?.Create();
+                SerializeManifest(updated).WriteThroughTo(manifestPath);
+
+                new FileInfo(managedModsPath).Directory?.Create();
+                JsonConvert.SerializeObject(currentIdentifiers).WriteThroughTo(managedModsPath);
             }
             catch (Exception e)
             {
                 log.WarnFormat("Could not update manifest at: {0}", manifestPath);
                 log.Debug(e);
+            }
+        }
+
+        // A malformed managed-mods file must not block every future manifest
+        // update until someone deletes it by hand, so a bad or missing file
+        // is just treated as empty.
+        internal static HashSet<string> ReadManagedMods(string managedModsPath)
+        {
+            try
+            {
+                return File.Exists(managedModsPath)
+                    ? JsonConvert.DeserializeObject<HashSet<string>>(File.ReadAllText(managedModsPath))
+                      ?? new HashSet<string>()
+                    : new HashSet<string>();
+            }
+            catch (Exception e)
+            {
+                log.WarnFormat("Could not read managed mods list at: {0}, treating as empty",
+                               managedModsPath);
+                log.Debug(e);
+                return new HashSet<string>();
             }
         }
 

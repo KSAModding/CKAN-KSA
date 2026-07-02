@@ -1306,6 +1306,9 @@ namespace CKAN.IO
                 registry_manager.Save(enforceConsistency);
                 tx.Complete();
                 EnforceCacheSizeLimit(registry_manager.registry, cache, config);
+                // Upgrade and Replace both come through here rather than InstallList/
+                // UninstallList, so the mod list file sync needs its own call here too.
+                instance.Game.ProcessLoadedModsBeforeGameStart(registry_manager.registry.InstalledModules);
             }
         }
 

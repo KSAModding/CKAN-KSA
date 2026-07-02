@@ -319,6 +319,60 @@ namespace Tests.Core.Games
         }
 
         [Test]
+        public void ReadManagedMods_CorruptFile_ReturnsEmptyInsteadOfThrowing()
+        {
+            // A malformed managed-mods file must not permanently block manifest
+            // updates until someone deletes it by hand.
+            var path = Path.Combine(tempDir, "managed-mods.json");
+            File.WriteAllText(path, "{ not valid json");
+
+            var result = KittenSpaceAgency.ReadManagedMods(path);
+
+            CollectionAssert.IsEmpty(result);
+        }
+
+        [Test]
+        public void ReadManagedMods_MissingFile_ReturnsEmpty()
+        {
+            var result = KittenSpaceAgency.ReadManagedMods(
+                             Path.Combine(tempDir, "does-not-exist.json"));
+
+            CollectionAssert.IsEmpty(result);
+        }
+
+        [Test]
+        public void UpdateManifestFile_ParentDirMissing_CreatesItAndWrites()
+        {
+            // The game may never have run yet, so <Documents>/My Games/Kitten
+            // Space Agency/ (the manifest's parent) might not exist at all.
+            var manifestPath    = Path.Combine(tempDir, "not-yet-created", "manifest.toml");
+            var managedModsPath = Path.Combine(tempDir, "managed-mods.json");
+
+            KittenSpaceAgency.UpdateManifestFile(new HashSet<string> { "KSP-Redux" },
+                                                 manifestPath, managedModsPath);
+
+            var entries = KittenSpaceAgency.ParseManifest(File.ReadAllText(manifestPath));
+            Assert.IsTrue(entries.Single(e => e.Id == "KSP-Redux").Enabled);
+        }
+
+        [Test]
+        public void UpdateManifestFile_CorruptManagedModsFile_StillUpdatesManifest()
+        {
+            // A corrupt managed-mods file must not stop the manifest itself from
+            // being kept in sync, it should just fall back to an empty "previously
+            // managed" set for this run.
+            var manifestPath    = Path.Combine(tempDir, "manifest.toml");
+            var managedModsPath = Path.Combine(tempDir, "managed-mods.json");
+            File.WriteAllText(managedModsPath, "{ not valid json");
+
+            KittenSpaceAgency.UpdateManifestFile(new HashSet<string> { "KSP-Redux" },
+                                                 manifestPath, managedModsPath);
+
+            var entries = KittenSpaceAgency.ParseManifest(File.ReadAllText(manifestPath));
+            Assert.IsTrue(entries.Single(e => e.Id == "KSP-Redux").Enabled);
+        }
+
+        [Test]
         public void FormatVersion_MonthGranular_AppendsWildcard()
         {
             // A year.month compatibility value matches any revision that month, so it
