@@ -269,16 +269,52 @@ namespace CKAN
 
         /// <summary>
         /// Returns path relative to this instance's GameDir.
+        /// For games whose mod directory lives outside GameDir (KSA), an absolute
+        /// path under that external mod root is returned relative to the
+        /// PrimaryModDirectoryRelative prefix, so registry keys stay GameDir-style
+        /// and portable.
         /// </summary>
         public string ToRelativeGameDir(string path)
-            => CKANPathUtils.ToRelative(path, GameDir);
+        {
+            if (Game.ModDirectoryIsExternal)
+            {
+                var absPath = CKANPathUtils.NormalizePath(path);
+                var modRoot = CKANPathUtils.NormalizePath(Game.PrimaryModDirectory(this));
+                if (absPath.Equals(modRoot, Platform.PathComparison)
+                    || absPath.StartsWith($"{modRoot}/", Platform.PathComparison))
+                {
+                    var sub = absPath[modRoot.Length..].TrimStart('/');
+                    return sub.Length > 0 ? $"{Game.PrimaryModDirectoryRelative}/{sub}"
+                                          : Game.PrimaryModDirectoryRelative;
+                }
+            }
+            return CKANPathUtils.ToRelative(path, GameDir);
+        }
 
         /// <summary>
         /// Given a path relative to this instance's GameDir, returns the
         /// absolute path on the system.
+        /// For games whose mod directory lives outside GameDir (KSA), a path under
+        /// the PrimaryModDirectoryRelative prefix resolves against that external
+        /// mod root instead of GameDir.
         /// </summary>
         public string ToAbsoluteGameDir(string path)
-            => CKANPathUtils.ToAbsolute(path, GameDir);
+        {
+            if (Game.ModDirectoryIsExternal)
+            {
+                var relPath = CKANPathUtils.NormalizePath(path);
+                var prefix  = Game.PrimaryModDirectoryRelative;
+                if (relPath.Equals(prefix, Platform.PathComparison)
+                    || relPath.StartsWith($"{prefix}/", Platform.PathComparison))
+                {
+                    var modRoot = CKANPathUtils.NormalizePath(Game.PrimaryModDirectory(this));
+                    var sub     = relPath[prefix.Length..].TrimStart('/');
+                    return sub.Length > 0 ? CKANPathUtils.ToAbsolute(sub, modRoot)
+                                          : modRoot;
+                }
+            }
+            return CKANPathUtils.ToAbsolute(path, GameDir);
+        }
 
         /// <summary>
         /// https://xkcd.com/208/

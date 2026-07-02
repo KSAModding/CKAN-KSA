@@ -67,6 +67,22 @@ namespace Tests.Core
         }
 
         [Test]
+        public void ToAbsoluteToRelative_KSP_Unchanged()
+        {
+            // KSP1's mod directory is inside GameDir, so the external-mod-root
+            // remapping is a no-op and paths resolve and relativize against
+            // GameDir exactly as before.
+            Assert.IsFalse(ksp!.Game.ModDirectoryIsExternal);
+
+            var abs = ksp.ToAbsoluteGameDir("GameData/ExampleMod/part.cfg");
+            Assert.AreEqual(
+                CKANPathUtils.NormalizePath(
+                    Path.Combine(ksp.GameDir, "GameData", "ExampleMod", "part.cfg")),
+                abs);
+            Assert.AreEqual("GameData/ExampleMod/part.cfg", ksp.ToRelativeGameDir(abs));
+        }
+
+        [Test]
         public void Tutorial()
         {
             //Use Uri to avoid issues with windows vs linux line separators.

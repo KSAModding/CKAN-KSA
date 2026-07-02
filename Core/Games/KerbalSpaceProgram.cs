@@ -55,6 +55,8 @@ namespace CKAN.Games.KerbalSpaceProgram
             => CKANPathUtils.NormalizePath(
                 Path.Combine(inst.GameDir, PrimaryModDirectoryRelative));
 
+        public bool ModDirectoryIsExternal => false;
+
         public string[] StockFolders => new string[]
         {
             "GameData/Squad",

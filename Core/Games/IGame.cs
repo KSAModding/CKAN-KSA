@@ -26,6 +26,15 @@ namespace CKAN.Games
         string         PrimaryModDirectoryRelative     { get; }
         string[]       AlternateModDirectoriesRelative { get; }
         string         PrimaryModDirectory(GameInstance inst);
+
+        // True when the primary mod directory lives outside the game directory.
+        // Most games install mods under GameDir, but KSA installs them into the
+        // user's Documents folder. When true, CKAN resolves the
+        // PrimaryModDirectoryRelative prefix against PrimaryModDirectory instead
+        // of GameDir; KSP1/KSP2 keep this false and their GameDir-relative
+        // behavior is unchanged.
+        bool           ModDirectoryIsExternal { get; }
+
         string[]       StockFolders         { get; }
         string[]       LeaveEmptyInClones   { get; }
         string[]       ReservedPaths        { get; }
