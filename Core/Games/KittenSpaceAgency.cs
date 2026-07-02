@@ -222,6 +222,14 @@ namespace CKAN.Games.KittenSpaceAgency
             
         };
 
+        // KSA compatibility can be expressed month-granular (year.month), which
+        // covers any revision in that month. Render such a value as year.month.*
+        // so it does not look like an incomplete build number in the UI.
+        public string FormatVersion(GameVersion v)
+            => v.IsMinorDefined && !v.IsPatchDefined
+                ? $"{v.Major}.{v.Minor}.*"
+                : v.ToString() ?? "";
+
         public string CompatibleVersionsFile => "compatible_ksa_versions.json";
 
         public string[] InstanceAnchorFiles => new string[]

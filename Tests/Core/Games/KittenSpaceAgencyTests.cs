@@ -10,6 +10,7 @@ using CKAN;
 using CKAN.IO;
 using CKAN.Versioning;
 using CKAN.Games.KittenSpaceAgency;
+using CKAN.Games.KerbalSpaceProgram;
 using ManifestModEntry = CKAN.Games.KittenSpaceAgency.KittenSpaceAgency.ManifestModEntry;
 
 namespace Tests.Core.Games
@@ -315,6 +316,35 @@ namespace Tests.Core.Games
                              currentIdentifiers: new HashSet<string>());
 
             CollectionAssert.Contains(result.Select(e => e.Id), "Core");
+        }
+
+        [Test]
+        public void FormatVersion_MonthGranular_AppendsWildcard()
+        {
+            // A year.month compatibility value matches any revision that month, so it
+            // is shown as year.month.* rather than the bare, incomplete-looking 2026.6.
+            Assert.AreEqual("2026.6.*",
+                            new KittenSpaceAgency().FormatVersion(GameVersion.Parse("2026.6")));
+        }
+
+        [Test]
+        public void FormatVersion_FullOrYearOnly_Unchanged()
+        {
+            var game = new KittenSpaceAgency();
+
+            // A fully specified build is shown as-is.
+            Assert.AreEqual("2026.6.0.4750",
+                            game.FormatVersion(GameVersion.Parse("2026.6.0.4750")));
+            // Year-only is not month-granular, so it is left alone.
+            Assert.AreEqual("2026", game.FormatVersion(GameVersion.Parse("2026")));
+        }
+
+        [Test]
+        public void FormatVersion_OtherGames_Unchanged()
+        {
+            // The wildcard rendering is KSA-specific; other games show the plain string.
+            Assert.AreEqual("1.12",
+                            new KerbalSpaceProgram().FormatVersion(GameVersion.Parse("1.12")));
         }
     }
 }
