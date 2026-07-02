@@ -45,7 +45,8 @@ namespace CKAN.Games
         bool           AllowInstallationIn(string name, [NotNullWhen(true)] out string? path);
         void           RebuildSubdirectories(string absGameRoot);
         string[]       DefaultCommandLines(SteamLibrary steamLib, DirectoryInfo path);
-        string[]       AdjustCommandLine(string[] args, GameVersion? installedVersion);
+        // inst is here so KSA can check for StarMap and swap it in
+        string[]       AdjustCommandLine(string[] args, GameVersion? installedVersion, GameInstance inst);
         IDlcDetector[] DlcDetectors { get; }
         IDictionary<string, string[]> InstallFilterPresets { get; }
 

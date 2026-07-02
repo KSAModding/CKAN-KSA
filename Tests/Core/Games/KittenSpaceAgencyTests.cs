@@ -235,5 +235,119 @@ namespace Tests.Core.Games
             Assert.AreEqual("1.12",
                             new KerbalSpaceProgram().FormatVersion(GameVersion.Parse("1.12")));
         }
+
+        [Test]
+        public void AdjustCommandLine_NoStarMap_LaunchesKSAUnchanged()
+        {
+            // no StarMap.exe under the mod root, launch line stays as-is
+            var args = new[] { "KSA.exe", "-single-instance" };
+
+            var adjusted = new KittenSpaceAgency().AdjustCommandLine(args, tempDir, fakeGameDir);
+
+            CollectionAssert.AreEqual(args, adjusted);
+        }
+
+        [Test]
+        public void AdjustCommandLine_StarMapPresent_SwapsInStarMapExe()
+        {
+            // release folder is versioned, not fixed, so it has to be found
+            // by scanning rather than a hardcoded path
+            var starMapExe = WriteFakeStarMapExe();
+
+            var adjusted = new KittenSpaceAgency().AdjustCommandLine(
+                               new[] { "KSA.exe", "-single-instance" }, tempDir, fakeGameDir);
+
+            Assert.AreEqual(starMapExe, adjusted[0]);
+            Assert.AreEqual("-single-instance", adjusted[1]);
+        }
+
+        [Test]
+        public void AdjustCommandLine_StarMapAlongsideOtherMods_StillFound()
+        {
+            // Real mods folders have other stuff in them (AutoStage, DeltaVMap,
+            // etc), StarMap has to be picked out of the mix.
+            Directory.CreateDirectory(Path.Combine(tempDir, "AutoStage"));
+            Directory.CreateDirectory(Path.Combine(tempDir, "DeltaVMap"));
+            var starMapExe = WriteFakeStarMapExe();
+
+            var adjusted = new KittenSpaceAgency().AdjustCommandLine(
+                               new[] { "KSA.exe", "-single-instance" }, tempDir, fakeGameDir);
+
+            Assert.AreEqual(starMapExe, adjusted[0]);
+        }
+
+        [Test]
+        public void AdjustCommandLine_SteamLaunch_NeverSwapped()
+        {
+            // steam:// url doesn't match the KSA.exe anchor, leave it alone
+            WriteFakeStarMapExe();
+
+            var args = new[] { "steam://rungameid/12345" };
+            var adjusted = new KittenSpaceAgency().AdjustCommandLine(args, tempDir, fakeGameDir);
+
+            CollectionAssert.AreEqual(args, adjusted);
+        }
+
+        [Test]
+        public void AdjustCommandLine_NoStarMap_NoConfigWritten()
+        {
+            // StarMap isn't there at all, so there's nothing to configure
+            new KittenSpaceAgency().AdjustCommandLine(
+                new[] { "KSA.exe", "-single-instance" }, tempDir, fakeGameDir);
+
+            Assert.IsFalse(File.Exists(Path.Combine(tempDir, StarMapTestFolder, "StarMapConfig.json")));
+        }
+
+        [Test]
+        public void AdjustCommandLine_StarMapPresent_WritesFreshConfig()
+        {
+            // First time StarMap shows up, no config yet, so one gets created
+            // pointing at this instance's game folder.
+            WriteFakeStarMapExe();
+
+            new KittenSpaceAgency().AdjustCommandLine(
+                new[] { "KSA.exe", "-single-instance" }, tempDir, fakeGameDir);
+
+            var config = JObject.Parse(File.ReadAllText(
+                             Path.Combine(tempDir, StarMapTestFolder, "StarMapConfig.json")));
+            Assert.AreEqual(fakeGameDir, (string?)config["GameLocation"]);
+            Assert.AreEqual("", (string?)config["RepositoryLocation"]);
+        }
+
+        [Test]
+        public void AdjustCommandLine_StarMapPresent_FixesGameLocationKeepsOtherFields()
+        {
+            // A config already exists (maybe from a stale instance, or fields
+            // a newer StarMap added). GameLocation must get corrected, but
+            // nothing else should be touched.
+            WriteFakeStarMapExe();
+            var configPath = Path.Combine(tempDir, StarMapTestFolder, "StarMapConfig.json");
+            File.WriteAllText(configPath,
+                              "{ \"GameLocation\": \"C:/somewhere/stale\", "
+                              + "\"RepositoryLocation\": \"https://example.com/repo\", "
+                              + "\"SomeFutureSetting\": true }");
+
+            new KittenSpaceAgency().AdjustCommandLine(
+                new[] { "KSA.exe", "-single-instance" }, tempDir, fakeGameDir);
+
+            var config = JObject.Parse(File.ReadAllText(configPath));
+            Assert.AreEqual(fakeGameDir, (string?)config["GameLocation"]);
+            Assert.AreEqual("https://example.com/repo", (string?)config["RepositoryLocation"]);
+            Assert.AreEqual(true, (bool?)config["SomeFutureSetting"]);
+        }
+
+        private readonly string fakeGameDir = "C:/fake/Kitten Space Agency";
+
+        // matches the real versioned folder name, not a fixed "StarMap"
+        private const string StarMapTestFolder = "StarMapLauncher-0.4.5";
+
+        private string WriteFakeStarMapExe()
+        {
+            var starMapDir = Path.Combine(tempDir, StarMapTestFolder);
+            Directory.CreateDirectory(starMapDir);
+            var starMapExe = Path.Combine(starMapDir, "StarMap.exe");
+            File.WriteAllText(starMapExe, "");
+            return starMapExe;
+        }
     }
 }
