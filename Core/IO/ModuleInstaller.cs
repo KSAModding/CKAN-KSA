@@ -183,6 +183,10 @@ namespace CKAN.IO
             }
 
             EnforceCacheSizeLimit(registry_manager.registry, cache, config);
+            // Keep any game specific mod list file (like KSA's manifest.toml) in
+            // sync right away instead of waiting for the next CKAN launch, since
+            // the game can also be started some other way (Steam, a shortcut, etc).
+            instance.Game.ProcessLoadedModsBeforeGameStart(registry_manager.registry.InstalledModules);
             User.RaiseProgress(Properties.Resources.ModuleInstallerDone, 100);
         }
 
@@ -897,6 +901,10 @@ namespace CKAN.IO
                 transaction.Complete();
             }
 
+            // Same reasoning as InstallList: update the mod list file right away
+            // rather than waiting for the next CKAN launch, in case the game gets
+            // started some other way.
+            instance.Game.ProcessLoadedModsBeforeGameStart(registry_manager.registry.InstalledModules);
             User.RaiseProgress(Properties.Resources.ModuleInstallerDone, 100);
         }
 
@@ -1298,6 +1306,9 @@ namespace CKAN.IO
                 registry_manager.Save(enforceConsistency);
                 tx.Complete();
                 EnforceCacheSizeLimit(registry_manager.registry, cache, config);
+                // Upgrade and Replace both come through here rather than InstallList/
+                // UninstallList, so the mod list file sync needs its own call here too.
+                instance.Game.ProcessLoadedModsBeforeGameStart(registry_manager.registry.InstalledModules);
             }
         }
 
