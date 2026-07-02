@@ -61,6 +61,7 @@ namespace CKAN.NetKAN.Transformers
                 new DownloadAttributeTransformer(http, fileService),
                 new InstallSizeTransformer(http, moduleService),
                 new StagingLinksTransformer(),
+                new KsaVersionTransformer(game),
                 new GeneratedByTransformer(),
                 new OptimusPrimeTransformer(),
                 new StripNetkanMetadataTransformer(),

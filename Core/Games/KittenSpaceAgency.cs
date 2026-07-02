@@ -112,40 +112,53 @@ namespace CKAN.Games.KittenSpaceAgency
             Path.Combine(CKANPathUtils.AppDataPath, "builds-ksa.json");
         
         private List<GameVersion> versions =
-            JsonConvert.DeserializeObject<List<GameVersion>>(
+            NormalizeAll(JsonConvert.DeserializeObject<List<GameVersion>>(
                 File.Exists(cachedBuildMapPath)
                     ? File.ReadAllText(cachedBuildMapPath)
-                    : Assembly.GetExecutingAssembly()
-                            .GetManifestResourceStream("CKAN.builds-ksa.json")
-                        is Stream s
-                        ? new StreamReader(s).ReadToEnd()
-                        : "")
-            ?? new List<GameVersion>();
+                    : EmbeddedBuildMapJson()))
+            .ToList();
+
+        // KSA's 3rd version component out of year.month.buildcounter.revision (the "build counter") is local to the build
+        // machine and non-monotonic by design, so it must never influence ordering or
+        // compatibility. We normalize / pin it to 0 on every KSA version handed to CKAN, which lets
+        // GameVersion.CompareTo fall through to the revision (4th component, the game's
+        // real ordinal) and lets compatibility be expressed as year.month.0.revision
+        // ranges. NetKAN inflation calls this too, so mod authors can declare the raw
+        // game version and CKAN normalizes it into the stamped .ckan.
+        public static GameVersion NormalizeBuildCounter(GameVersion v)
+            => v.IsBuildDefined ? new GameVersion(v.Major, v.Minor, 0, v.Build)
+             : v.IsPatchDefined ? new GameVersion(v.Major, v.Minor, 0)
+             : v;
+
+        // Normalize a deserialized build map: drop any null entries a malformed map
+        // might contain, then pin every build counter to 0.
+        private static IEnumerable<GameVersion> NormalizeAll(IEnumerable<GameVersion>? raw)
+            => raw?.OfType<GameVersion>().Select(NormalizeBuildCounter)
+               ?? Enumerable.Empty<GameVersion>();
+
+        // The embedded builds-ksa.json resource text, or "" if it is missing.
+        private static string EmbeddedBuildMapJson()
+            => Assembly.GetExecutingAssembly()
+                       .GetManifestResourceStream("CKAN.builds-ksa.json")
+                   is Stream s
+                       ? new StreamReader(s).ReadToEnd()
+                       : "";
 
         public List<GameVersion> KnownVersions => versions;
-            
-        
+
         public GameVersion[] EmbeddedGameVersions
-        => (Assembly.GetExecutingAssembly()
-                    .GetManifestResourceStream("CKAN.builds-ksa.json")
-                        is Stream s
-                    ? JsonConvert.DeserializeObject<GameVersion[]>(
-                        new StreamReader(s).ReadToEnd())
-                    : null)
-                ?? Array.Empty<GameVersion>();
+            => NormalizeAll(JsonConvert.DeserializeObject<GameVersion[]>(EmbeddedBuildMapJson()))
+               .ToArray();
+
         public GameVersion[] ParseBuildsJson(JToken json)
-            => json.ToObject<GameVersion[]>()
-               ?? Array.Empty<GameVersion>();
+            => NormalizeAll(json.ToObject<GameVersion[]>())
+               .ToArray();
 
         public GameVersion? DetectVersion(DirectoryInfo where)
-        {
-            var versionProvider = new KsaBuildVersionProvider();
-            GameVersion? version = null;
-
-            versionProvider.TryGetVersion(where.FullName, out version);
-            
-            return version;
-        }
+            => new KsaBuildVersionProvider().TryGetVersion(where.FullName, out var version)
+               && version is not null
+                ? NormalizeBuildCounter(version)
+                : null;
 
         public GameVersion[] DefaultCompatibleVersions(GameVersion installedVersion)
             => new GameVersion[]
