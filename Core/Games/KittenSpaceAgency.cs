@@ -124,45 +124,74 @@ namespace CKAN.Games.KittenSpaceAgency
                 .ToArray();
 
         // StarMap replaces KSA.exe instead of injecting into it like BepInEx
-        // does for KSP2. Its release folder name is versioned
-        // (StarMapLauncher-0.4.5 as of writing) so we scan for the exe by
-        // name instead of assuming a fixed folder. If it's not there we just
-        // launch KSA.exe like before.
-        private const string StarMapExeName    = "StarMap.Loader.exe";
+        // does for KSP2. StarMap ships its entry point as StarMap.exe (its
+        // release build renames both the launcher and loader outputs to that),
+        // in a versioned folder, so we scan the mod folders for that exe by
+        // name. If it is not there we just launch KSA.exe like before.
+        private const string StarMapExeName    = "StarMap.exe";
         private const string StarMapConfigName = "StarMapConfig.json";
 
         public string[] AdjustCommandLine(string[] args, GameVersion? installedVersion, GameInstance inst)
             => AdjustCommandLine(args, PrimaryModDirectory(inst), inst.GameDir);
 
         // modRoot/gameDir are separate args so tests can point them at temp
-        // dirs instead of the real Documents mods folder and game install
+        // dirs instead of the real Documents mods folder and game install.
         internal string[] AdjustCommandLine(string[] args, string modRoot, string gameDir)
         {
-            var starMapExe = Directory.Exists(modRoot)
-                ? Directory.EnumerateDirectories(modRoot)
-                           .Select(dir => Path.Combine(dir, StarMapExeName))
-                           .FirstOrDefault(File.Exists)
-                : null;
-            if (args.Length > 0
-                && args[0].Equals(InstanceAnchorFiles[0], StringComparison.OrdinalIgnoreCase)
-                && starMapExe != null)
+            try
             {
-                EnsureStarMapConfig(Path.Combine(Path.GetDirectoryName(starMapExe)!, StarMapConfigName), gameDir);
-                return new[] { starMapExe }.Concat(args.Skip(1)).ToArray();
+                // A leftover older StarMap folder could sit next to the current
+                // one, so pick deterministically (highest folder name) instead of
+                // relying on filesystem enumeration order.
+                var starMapExe = Directory.Exists(modRoot)
+                    ? Directory.EnumerateDirectories(modRoot)
+                               .OrderByDescending(dir => dir, StringComparer.OrdinalIgnoreCase)
+                               .Select(dir => Path.Combine(dir, StarMapExeName))
+                               .FirstOrDefault(File.Exists)
+                    : null;
+                if (args.Length > 0
+                    && args[0].Equals(InstanceAnchorFiles[0], StringComparison.OrdinalIgnoreCase)
+                    && starMapExe != null)
+                {
+                    EnsureStarMapConfig(Path.Combine(Path.GetDirectoryName(starMapExe)!, StarMapConfigName), gameDir);
+                    // StarMap loads and runs the game itself; its solo mode takes
+                    // no arguments (a first argument is read as a named-pipe name,
+                    // which would send it into loader mode), so KSA's own launch
+                    // args are intentionally dropped here.
+                    return new[] { starMapExe };
+                }
+            }
+            catch (Exception e)
+            {
+                // This runs before PlayGame's own error handling, so detecting or
+                // configuring StarMap must never break launching: on any failure
+                // fall back to launching KSA.exe unchanged.
+                log.WarnFormat("Could not prepare StarMap launch, falling back to {0}: {1}",
+                               InstanceAnchorFiles[0], e.Message);
             }
             return args;
         }
 
-        // StarMap's first run just fails and writes this file if it's missing
-        // or wrong, so we keep GameLocation pointed at this instance ourselves.
-        // Everything else in the file (RepositoryLocation, whatever StarMap
-        // adds later) is left alone, RepositoryLocation only gets set on a
-        // brand new file since StarMap's docs say it can be left empty.
+        // StarMap's first run just fails and writes this file if it is missing,
+        // so we keep GameLocation pointed at this instance ourselves. Everything
+        // else in the file (RepositoryLocation, whatever StarMap adds later) is
+        // left alone; RepositoryLocation is only seeded on a brand new or
+        // unreadable file, since StarMap's docs say it can be left empty.
         private static void EnsureStarMapConfig(string configPath, string gameDir)
         {
-            var config = File.Exists(configPath)
-                ? JObject.Parse(File.ReadAllText(configPath))
-                : new JObject { ["RepositoryLocation"] = "" };
+            JObject config;
+            try
+            {
+                config = File.Exists(configPath)
+                    ? JObject.Parse(File.ReadAllText(configPath))
+                    : new JObject { ["RepositoryLocation"] = "" };
+            }
+            catch (Exception)
+            {
+                // A blank or corrupt existing config (e.g. a partial write from a
+                // prior StarMap crash) must not abort the launch: start fresh.
+                config = new JObject { ["RepositoryLocation"] = "" };
+            }
             config["GameLocation"] = gameDir;
             config.ToString().WriteThroughTo(configPath);
         }
