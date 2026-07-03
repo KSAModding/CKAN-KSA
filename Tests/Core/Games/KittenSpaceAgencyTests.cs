@@ -265,10 +265,13 @@ namespace Tests.Core.Games
         }
 
         [Test]
-        public void ReconcileManifest_DisabledMod_IsFlippedToEnabled()
+        public void ReconcileManifest_ExistingDisabledEntry_LeftDisabled()
         {
-            // The game auto discovers a dropped mod folder as disabled. Once CKAN
-            // is the one managing that mod, it needs to be active on next launch.
+            // A mod already in the manifest keeps its enabled state on every sync, so a
+            // deliberate in-game disable survives an unrelated CKAN operation. This holds
+            // even when CKAN has no record of the mod (empty previouslyManaged), because
+            // the enabled decision never consults previouslyManaged, only whether the mod
+            // is already present.
             var entries = new List<ManifestModEntry>
             {
                 new ManifestModEntry { Id = "KSP-Redux", Enabled = false },
@@ -276,10 +279,10 @@ namespace Tests.Core.Games
 
             var result = KittenSpaceAgency.ReconcileManifest(
                              entries,
-                             previouslyManaged:  new HashSet<string> { "KSP-Redux" },
+                             previouslyManaged:  new HashSet<string>(),
                              currentIdentifiers: new HashSet<string> { "KSP-Redux" });
 
-            Assert.IsTrue(result.Single(e => e.Id == "KSP-Redux").Enabled);
+            Assert.IsFalse(result.Single(e => e.Id == "KSP-Redux").Enabled);
         }
 
         [Test]
@@ -554,6 +557,130 @@ namespace Tests.Core.Games
             var starMapExe = Path.Combine(starMapDir, "StarMap.exe");
             File.WriteAllText(starMapExe, "");
             return starMapExe;
+        }
+
+        [Test]
+        public void ModFolderNames_DerivesTopLevelFoldersUnderModDir()
+        {
+            var files = new[]
+            {
+                "mods/AdvancedFlightComputer/AdvancedFlightComputer.dll",
+                "mods/AdvancedFlightComputer/mod.toml",
+                "mods/StageInfo/StageInfo.dll",
+                "mods/StageInfo/mod.toml",
+                "readme.txt",              // GameRoot install, ignored
+                "Content/Core/thing.xml",  // stock content, ignored
+            };
+
+            var folders = KittenSpaceAgency.ModFolderNames(files, "mods");
+
+            CollectionAssert.AreEquivalent(
+                new[] { "AdvancedFlightComputer", "StageInfo" }, folders);
+        }
+
+        [Test]
+        public void ModFolderNames_UsesFolderNameNotIdentifier()
+        {
+            // The manifest id must be the on-disk folder the game sees, even if a mod
+            // installs into a folder whose name differs from its CKAN identifier.
+            var files = new[]
+            {
+                "mods/Real-Folder-Name/plugin.dll",
+                "mods/Real-Folder-Name/mod.toml",
+            };
+
+            CollectionAssert.AreEqual(new[] { "Real-Folder-Name" },
+                                      KittenSpaceAgency.ModFolderNames(files, "mods"));
+        }
+
+        [Test]
+        public void ModFolderNames_IgnoresFolderWithoutModToml()
+        {
+            // The game only treats a folder as a mod if it contains a mod.toml, so a
+            // bundled data-only folder must not produce a phantom manifest entry.
+            var files = new[]
+            {
+                "mods/TheMod/TheMod.dll",
+                "mods/TheMod/mod.toml",
+                "mods/SharedAssets/texture.png",   // no mod.toml -> not a mod
+            };
+
+            CollectionAssert.AreEqual(new[] { "TheMod" },
+                                      KittenSpaceAgency.ModFolderNames(files, "mods"));
+        }
+
+        [Test]
+        public void ParseValue_StripsQuotesAndInlineComments()
+        {
+            Assert.AreEqual("Core",  KittenSpaceAgency.ParseValue("\"Core\""));
+            Assert.AreEqual("Core",  KittenSpaceAgency.ParseValue("'Core'"));
+            Assert.AreEqual("Core",  KittenSpaceAgency.ParseValue("\"Core\" # keep"));
+            Assert.AreEqual("true",  KittenSpaceAgency.ParseValue("true # on"));
+            Assert.AreEqual("true",  KittenSpaceAgency.ParseValue("  true  "));
+        }
+
+        [Test]
+        public void ParseManifest_InlineCommentOnEnabled_NotMisreadAsDisabled()
+        {
+            // A trailing comment on enabled must not flip a mod off (the old parser
+            // compared the whole remainder against "true").
+            var entries = KittenSpaceAgency.ParseManifest(
+                "[[mods]]\nid = \"Core\"\nenabled = true # stock\n");
+
+            Assert.IsTrue(entries.Single(e => e.Id == "Core").Enabled);
+        }
+
+        [Test]
+        public void ParseManifest_SingleQuotedId_Parsed()
+        {
+            var entries = KittenSpaceAgency.ParseManifest(
+                "[[mods]]\nid = 'MyMod'\nenabled = true\n");
+
+            Assert.AreEqual("MyMod", entries.Single().Id);
+        }
+
+        [Test]
+        public void ParseManifest_MissingEnabledKey_DefaultsToEnabled()
+        {
+            // The game's ModEntry defaults a missing enabled key to true, so an entry
+            // without one must not be silently rewritten as disabled.
+            var entries = KittenSpaceAgency.ParseManifest("[[mods]]\nid = \"Foo\"\n");
+
+            Assert.IsTrue(entries.Single().Enabled);
+        }
+
+        [Test]
+        public void ModFolderNames_IgnoresLooseFilesDirectlyUnderModDir()
+        {
+            // A file installed straight into mods/ (no subfolder) is not a mod folder,
+            // so it must not produce a phantom manifest entry the game would prune.
+            var files = new[]
+            {
+                "mods/loose.cfg",
+                "mods/RealMod/plugin.dll",
+                "mods/RealMod/mod.toml",
+            };
+
+            CollectionAssert.AreEqual(new[] { "RealMod" },
+                                      KittenSpaceAgency.ModFolderNames(files, "mods"));
+        }
+
+        [Test]
+        public void ReconcileManifest_MatchesExistingEntryByFileSystemCasing()
+        {
+            // Folder names are matched the way the file system does. On Windows a
+            // casing difference must not add a duplicate entry for the same folder.
+            var entries = new List<ManifestModEntry>
+            {
+                new ManifestModEntry { Id = "MyMod", Enabled = true },
+            };
+
+            var result = KittenSpaceAgency.ReconcileManifest(
+                             entries,
+                             previouslyManaged:  new HashSet<string>(),
+                             currentIdentifiers: new HashSet<string> { "mymod" });
+
+            Assert.AreEqual(Platform.IsWindows ? 1 : 2, result.Count);
         }
     }
 }
