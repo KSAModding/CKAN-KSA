@@ -12,11 +12,30 @@ namespace CKAN.Extensions
     {
         /// <summary>
         /// Extension method to get from a directory to its drive.
+        /// The directory does not have to exist yet (e.g. a mod folder before
+        /// the first install); the drive is resolved from the nearest existing
+        /// ancestor, i.e. the drive a new directory at this path would land on.
+        /// On Linux, drive properties throw DriveNotFoundException for paths
+        /// that do not exist, while Windows resolves them from the path root.
         /// </summary>
         /// <param name="dir">Any DirectoryInfo object</param>
         /// <returns>The DriveInfo associated with this directory, if any, else null</returns>
         public static DriveInfo? GetDrive(this DirectoryInfo dir)
-            => Utilities.DefaultIfThrows(() => new DriveInfo(dir.FullName));
+            => Utilities.DefaultIfThrows(() => new DriveInfo(dir.ExistingAncestor().FullName));
+
+        /// <summary>
+        /// The directory itself if it exists, else the nearest ancestor that
+        /// does, falling back to the filesystem root.
+        /// </summary>
+        private static DirectoryInfo ExistingAncestor(this DirectoryInfo dir)
+        {
+            var candidate = dir;
+            while (!candidate.Exists && candidate.Parent is DirectoryInfo parent)
+            {
+                candidate = parent;
+            }
+            return candidate;
+        }
 
         public static bool AncestorPathOf(this DirectoryInfo outer, DirectoryInfo inner)
             => inner.TraverseNodes(di => di.Parent)
