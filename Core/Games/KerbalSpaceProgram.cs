@@ -154,7 +154,7 @@ namespace CKAN.Games.KerbalSpaceProgram
                                          .Select(url => url.ToString()))
                          .ToArray();
 
-        public string[] AdjustCommandLine(string[] args, GameVersion? installedVersion)
+        public string[] AdjustCommandLine(string[] args, GameVersion? installedVersion, GameInstance inst)
         {
             // -single-instance crashes KSP 1.8 to KSP 1.11 on Linux
             // https://issuetracker.unity3d.com/issues/linux-segmentation-fault-when-running-a-built-project-with-single-instance-argument

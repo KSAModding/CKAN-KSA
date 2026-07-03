@@ -395,7 +395,7 @@ namespace CKAN
         [ExcludeFromCodeCoverage]
         public void PlayGame(string command, IUser user, Action? onExit = null)
         {
-            if (Game.AdjustCommandLine(command.Split(' '), Version())
+            if (Game.AdjustCommandLine(command.Split(' '), Version(), this)
                 //is [string binary, ..] and string[] split
                 is string[] split
                 && split.Length > 0
@@ -403,13 +403,20 @@ namespace CKAN
             {
                 try
                 {
-                    Directory.SetCurrentDirectory(GameDir);
+                    // A game can swap in a different exe outside GameDir (e.g. KSA
+                    // launching StarMap instead of KSA.exe), in which case that exe
+                    // needs its own folder as its working directory, not GameDir.
+                    var workingDir = Path.IsPathRooted(binary)
+                        ? Path.GetDirectoryName(binary) ?? GameDir
+                        : GameDir;
+                    Directory.SetCurrentDirectory(workingDir);
                     Process p = new Process()
                     {
                         StartInfo = new ProcessStartInfo()
                         {
-                            FileName  = binary,
-                            Arguments = string.Join(" ", split.Skip(1))
+                            FileName         = binary,
+                            Arguments        = string.Join(" ", split.Skip(1)),
+                            WorkingDirectory = workingDir
                         },
                         EnableRaisingEvents = true
                     };
