@@ -202,9 +202,11 @@ namespace CKAN
         /// already registered instance, because CKAN mod operations in one of
         /// them affect the others (each instance keeps its own registry).
         /// </summary>
+        /// <param name="instance">The instance to register</param>
+        /// <param name="user">IUser to receive the warning; falls back to the manager's User</param>
         /// <returns>The resulting GameInstance object</returns>
         /// <exception cref="NotGameDirKraken">Thrown if the instance is not a valid game instance.</exception>
-        public GameInstance AddInstance(GameInstance instance)
+        public GameInstance AddInstance(GameInstance instance, IUser? user = null)
         {
             if (instance.Valid)
             {
@@ -217,8 +219,8 @@ namespace CKAN
                     var otherNames = string.Join(", ", sharers.Select(other => other.Name));
                     log.WarnFormat("Instance {0} shares its mod directory with: {1}",
                                    name, otherNames);
-                    User.RaiseError(Properties.Resources.GameInstanceManagerSharedModRootWarning,
-                                    name, otherNames, instance.Game.ShortName);
+                    (user ?? User).RaiseError(Properties.Resources.GameInstanceManagerSharedModRootWarning,
+                                              name, otherNames, instance.Game.ShortName);
                 }
             }
             else
@@ -259,7 +261,7 @@ namespace CKAN
         public GameInstance? AddInstance(string path, string name, IUser user)
         {
             var game = DetermineGame(new DirectoryInfo(path), user);
-            return game == null ? null : AddInstance(new GameInstance(game, path, name));
+            return game == null ? null : AddInstance(new GameInstance(game, path, name), user);
         }
 
         /// <summary>

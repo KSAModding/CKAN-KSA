@@ -524,6 +524,33 @@ namespace Tests.Core
         }
 
         [Test]
+        public void AddInstance_WithExplicitUser_WarnsThatUser()
+        {
+            // Arrange: the ConsoleUI passes its screen as the IUser
+            using (var dirA    = new TemporaryDirectory())
+            using (var dirB    = new TemporaryDirectory())
+            using (var modRoot = new TemporaryDirectory())
+            using (var config  = new FakeConfiguration(new List<Tuple<string, string, string>>(),
+                                                       null, null))
+            {
+                var managerUser  = new CapturingUser(false, q => true, (msg, objs) => 0);
+                var explicitUser = new CapturingUser(false, q => true, (msg, objs) => 0);
+                using (var mgr = new GameInstanceManager(managerUser, config))
+                {
+                    var game = SharedModRootGame(modRoot);
+
+                    // Act
+                    mgr.AddInstance(new GameInstance(game.Object, dirA, "expA"));
+                    mgr.AddInstance(new GameInstance(game.Object, dirB, "expB"), explicitUser);
+
+                    // Assert
+                    Assert.IsEmpty(managerUser.RaisedErrors);
+                    Assert.AreEqual(1, explicitUser.RaisedErrors.Count);
+                }
+            }
+        }
+
+        [Test]
         public void AddInstance_ExternalInstancesWithDifferentModRoots_DoesNotWarn()
         {
             // Arrange
