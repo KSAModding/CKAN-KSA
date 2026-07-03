@@ -43,7 +43,9 @@ namespace CKAN.ConsoleUI {
         /// </summary>
         protected override void Save()
         {
-            manager.AddInstance(path.Value, name.Value, new NullUser());
+            // Pass ourselves as the IUser so warnings (e.g. a second instance
+            // sharing the external mod folder) surface as dialogs in the ConsoleUI.
+            manager.AddInstance(path.Value, name.Value, this);
         }
 
         private static readonly string examplePath = Path.Combine(

@@ -3,6 +3,7 @@ using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 
+using Moq;
 using NUnit.Framework;
 
 using CKAN;
@@ -10,8 +11,10 @@ using CKAN.Configuration;
 using CKAN.DLC;
 using CKAN.IO;
 using CKAN.Versioning;
+using CKAN.Games;
 using CKAN.Games.KerbalSpaceProgram;
 using CKAN.Games.KerbalSpaceProgram.DLC;
+using CKAN.Games.KittenSpaceAgency;
 
 using Tests.Core.Configuration;
 using Tests.Data;
@@ -475,6 +478,186 @@ namespace Tests.Core
                     DirectoryAssert.Exists(cachePath, $"{cachePath} should exist");
                 }
             }
+        }
+
+        // Shared external mod root (KSA-style games)
+
+        [Test]
+        public void AddInstance_SecondInstanceSharingModRoot_WarnsAndRegistersBoth()
+        {
+            // Arrange
+            using (var dirA    = new TemporaryDirectory())
+            using (var dirB    = new TemporaryDirectory())
+            using (var modRoot = new TemporaryDirectory())
+            using (var config  = new FakeConfiguration(new List<Tuple<string, string, string>>(),
+                                                       null, null))
+            {
+                var user = new CapturingUser(false, q => true, (msg, objs) => 0);
+                using (var mgr = new GameInstanceManager(user, config))
+                {
+                    var game  = SharedModRootGame(modRoot);
+                    var instA = new GameInstance(game.Object, dirA, "sharedA");
+                    var instB = new GameInstance(game.Object, dirB, "sharedB");
+
+                    // Act
+                    mgr.AddInstance(instA);
+                    var errorsAfterFirst = user.RaisedErrors.Count;
+                    mgr.AddInstance(instB);
+
+                    // Assert
+                    Assert.AreEqual(0, errorsAfterFirst,
+                                    "The first instance of a shared-mod-root game should not warn");
+                    Assert.AreEqual(1, user.RaisedErrors.Count,
+                                    "A second instance sharing the mod root should warn");
+                    // Pin the placeholder mapping: {0} new instance, {1} sharers, {2} game
+                    var warning = user.RaisedErrors.Single();
+                    StringAssert.StartsWith("\"sharedB\" shares", warning);
+                    StringAssert.Contains("with: sharedA", warning);
+                    StringAssert.Contains("FakeExternal stores mods", warning);
+                    Assert.IsTrue(mgr.HasInstance("sharedA"));
+                    Assert.IsTrue(mgr.HasInstance("sharedB"),
+                                  "The warning must not block registration");
+                    CollectionAssert.AreEquivalent(new[] { instA },
+                                                   mgr.InstancesSharingModRoot(instB));
+                }
+            }
+        }
+
+        [Test]
+        public void AddInstance_WithExplicitUser_WarnsThatUser()
+        {
+            // Arrange: the ConsoleUI passes its screen as the IUser
+            using (var dirA    = new TemporaryDirectory())
+            using (var dirB    = new TemporaryDirectory())
+            using (var modRoot = new TemporaryDirectory())
+            using (var config  = new FakeConfiguration(new List<Tuple<string, string, string>>(),
+                                                       null, null))
+            {
+                var managerUser  = new CapturingUser(false, q => true, (msg, objs) => 0);
+                var explicitUser = new CapturingUser(false, q => true, (msg, objs) => 0);
+                using (var mgr = new GameInstanceManager(managerUser, config))
+                {
+                    var game = SharedModRootGame(modRoot);
+
+                    // Act
+                    mgr.AddInstance(new GameInstance(game.Object, dirA, "expA"));
+                    mgr.AddInstance(new GameInstance(game.Object, dirB, "expB"), explicitUser);
+
+                    // Assert
+                    Assert.IsEmpty(managerUser.RaisedErrors);
+                    Assert.AreEqual(1, explicitUser.RaisedErrors.Count);
+                }
+            }
+        }
+
+        [Test]
+        public void AddInstance_ExternalInstancesWithDifferentModRoots_DoesNotWarn()
+        {
+            // Arrange
+            using (var dirA     = new TemporaryDirectory())
+            using (var dirB     = new TemporaryDirectory())
+            using (var modRootA = new TemporaryDirectory())
+            using (var modRootB = new TemporaryDirectory())
+            using (var config   = new FakeConfiguration(new List<Tuple<string, string, string>>(),
+                                                        null, null))
+            {
+                var user = new CapturingUser(false, q => true, (msg, objs) => 0);
+                using (var mgr = new GameInstanceManager(user, config))
+                {
+                    var instA = new GameInstance(SharedModRootGame(modRootA).Object, dirA, "extA");
+                    var instB = new GameInstance(SharedModRootGame(modRootB).Object, dirB, "extB");
+
+                    // Act
+                    mgr.AddInstance(instA);
+                    mgr.AddInstance(instB);
+
+                    // Assert
+                    Assert.IsEmpty(user.RaisedErrors);
+                    Assert.IsEmpty(mgr.InstancesSharingModRoot(instB));
+                }
+            }
+        }
+
+        [Test]
+        public void AddInstance_SecondNonExternalInstance_DoesNotWarn()
+        {
+            // Arrange: the manager already knows the SetUp KSP instance
+            using (var tidy2 = new DisposableKSP())
+            {
+                var user = new CapturingUser(false, q => true, (msg, objs) => 0);
+                using (var mgr = new GameInstanceManager(user, cfg!))
+                {
+                    // Act
+                    mgr.AddInstance(tidy2.KSP);
+
+                    // Assert
+                    Assert.IsEmpty(user.RaisedErrors);
+                    Assert.IsEmpty(mgr.InstancesSharingModRoot(tidy2.KSP));
+                }
+            }
+        }
+
+        [Test]
+        public void AddInstance_SecondKsaInstance_WarnsAndFindsSharer()
+        {
+            // Arrange
+            using (var dirA   = new TemporaryDirectory())
+            using (var dirB   = new TemporaryDirectory())
+            using (var config = new FakeConfiguration(new List<Tuple<string, string, string>>(),
+                                                      null, null))
+            {
+                var user = new CapturingUser(false, q => true, (msg, objs) => 0);
+                using (var mgr = new GameInstanceManager(user, config))
+                {
+                    var instA = new GameInstance(new KittenSpaceAgency(), FakeKsaGameDir(dirA), "ksaA");
+                    var instB = new GameInstance(new KittenSpaceAgency(), FakeKsaGameDir(dirB), "ksaB");
+
+                    // Act
+                    mgr.AddInstance(instA);
+                    mgr.AddInstance(instB);
+
+                    // Assert: every KSA instance shares the user's Documents mods folder
+                    Assert.AreEqual(1, user.RaisedErrors.Count);
+                    // Pin the placeholder mapping: {0} new instance, {1} sharers, {2} game
+                    var warning = user.RaisedErrors.Single();
+                    StringAssert.StartsWith("\"ksaB\" shares", warning);
+                    StringAssert.Contains("with: ksaA", warning);
+                    StringAssert.Contains("KSA stores mods", warning);
+                    CollectionAssert.AreEquivalent(new[] { instA },
+                                                   mgr.InstancesSharingModRoot(instB));
+                }
+            }
+        }
+
+        // A minimal fake game whose mod directory lives outside GameDir (like KSA),
+        // valid enough for GameInstanceManager.AddInstance to accept its instances.
+        private static Mock<IGame> SharedModRootGame(string externalModRoot)
+        {
+            var game = new Mock<IGame>();
+            game.Setup(g => g.ShortName).Returns("FakeExternal");
+            game.Setup(g => g.CompatibleVersionsFile).Returns("compatible_versions.json");
+            game.Setup(g => g.GameInFolder(It.IsAny<DirectoryInfo>())).Returns(true);
+            game.Setup(g => g.DetectVersion(It.IsAny<DirectoryInfo>()))
+                .Returns(new GameVersion(1, 0, 0, 0));
+            game.Setup(g => g.DefaultCompatibleVersions(It.IsAny<GameVersion>()))
+                .Returns(Array.Empty<GameVersion>());
+            game.Setup(g => g.StockFolders).Returns(Array.Empty<string>());
+            game.Setup(g => g.PrimaryModDirectoryRelative).Returns("mods");
+            game.Setup(g => g.ModDirectoryIsExternal).Returns(true);
+            game.Setup(g => g.PrimaryModDirectory(It.IsAny<GameInstance>())).Returns(externalModRoot);
+            return game;
+        }
+
+        // A folder that KittenSpaceAgency accepts as a valid game instance:
+        // the KSA.exe anchor plus one Content/Versions build file.
+        private static string FakeKsaGameDir(string dir)
+        {
+            File.WriteAllText(Path.Combine(dir, "KSA.exe"), "");
+            var versionsDir = Path.Combine(dir, "Content", "Versions");
+            Directory.CreateDirectory(versionsDir);
+            File.WriteAllText(Path.Combine(versionsDir, "v2026.6.X.4750.json"),
+                              "{ \"build\": \"2026.6.9.4750\" }");
+            return dir;
         }
 
         private FakeConfiguration GetTestCfg(string name)
