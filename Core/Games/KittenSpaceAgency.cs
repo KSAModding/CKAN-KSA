@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -492,19 +493,118 @@ namespace CKAN.Games.KittenSpaceAgency
         }
 
         // Read a TOML scalar, stripping surrounding quotes and any trailing inline
-        // comment. Covers the double quoted, single quoted, and bare forms the game's
-        // Tomlet writer or a hand editor can produce, so a value like `true # note`
-        // or `'MyMod'` is not misread.
+        // comment. Covers the double quoted (with backslash escapes), single quoted
+        // literal, and bare forms a hand editor or CKAN's own writer can produce, so a
+        // value like `true # note`, `'MyMod'`, or an id whose folder name contains an
+        // escaped quote (`"a\"b"`) is read correctly instead of being truncated. The game
+        // itself writes the file by hand without escaping, but reads it back with Tomlet.
         internal static string ParseValue(string raw)
         {
             var s = raw.Trim();
-            if (s.Length > 0 && (s[0] == '"' || s[0] == '\''))
+            if (s.Length > 0 && s[0] == '"')
             {
-                var close = s.IndexOf(s[0], 1);
+                // Basic string: honor backslash escapes, stop at the first unescaped
+                // closing quote (so a trailing inline comment is ignored too).
+                return UnescapeTomlBasicString(s);
+            }
+            if (s.Length > 0 && s[0] == '\'')
+            {
+                // Literal string: no escaping, verbatim until the next single quote.
+                var close = s.IndexOf('\'', 1);
                 return close > 0 ? s[1..close] : s[1..];
             }
             var hash = s.IndexOf('#');
             return (hash >= 0 ? s[..hash] : s).Trim();
+        }
+
+        // Decode the body of a TOML basic string (a value beginning with a double
+        // quote), resolving the escape sequences we emit plus the other standard ones,
+        // and stopping at the first unescaped closing quote.
+        private static string UnescapeTomlBasicString(string s)
+        {
+            var sb = new StringBuilder(s.Length);
+            for (var i = 1; i < s.Length; i++)
+            {
+                var c = s[i];
+                if (c == '"')
+                {
+                    break;
+                }
+                if (c == '\\' && i + 1 < s.Length)
+                {
+                    var next = s[++i];
+                    switch (next)
+                    {
+                        case '"':  sb.Append('"');  break;
+                        case '\\': sb.Append('\\'); break;
+                        case 'b':  sb.Append('\b'); break;
+                        case 't':  sb.Append('\t'); break;
+                        case 'n':  sb.Append('\n'); break;
+                        case 'f':  sb.Append('\f'); break;
+                        case 'r':  sb.Append('\r'); break;
+                        case 'u':
+                            // A four digit hex code point (\uXXXX).
+                            if (i + 4 < s.Length
+                                && ushort.TryParse(s.Substring(i + 1, 4),
+                                                   NumberStyles.HexNumber,
+                                                   CultureInfo.InvariantCulture,
+                                                   out var code))
+                            {
+                                sb.Append((char)code);
+                                i += 4;
+                            }
+                            else
+                            {
+                                sb.Append(next);
+                            }
+                            break;
+                        default:
+                            // Unknown escape: keep the character after the backslash.
+                            sb.Append(next);
+                            break;
+                    }
+                }
+                else
+                {
+                    sb.Append(c);
+                }
+            }
+            return sb.ToString();
+        }
+
+        // Encode a string as the body of a TOML basic string (the part between the
+        // quotes), escaping the characters that would otherwise break the double quoted
+        // form so an id containing a quote, backslash, or control character round trips.
+        private static string EscapeTomlBasicString(string s)
+        {
+            var sb = new StringBuilder(s.Length);
+            foreach (var c in s)
+            {
+                switch (c)
+                {
+                    case '"':  sb.Append("\\\""); break;
+                    case '\\': sb.Append("\\\\"); break;
+                    case '\b': sb.Append("\\b");  break;
+                    case '\t': sb.Append("\\t");  break;
+                    case '\n': sb.Append("\\n");  break;
+                    case '\f': sb.Append("\\f");  break;
+                    case '\r': sb.Append("\\r");  break;
+                    default:
+                        // TOML basic strings must escape the C0 controls (< U+0020) and
+                        // U+007F (DEL); the game's Tomlet reader rejects any of them raw.
+                        if (c < ' ' || c == '\u007F')
+                        {
+                            sb.Append("\\u")
+                              .Append(((int)c).ToString("X4", CultureInfo.InvariantCulture));
+                        }
+                        else
+                        {
+                            sb.Append(c);
+                        }
+                        break;
+                }
+            }
+            return sb.ToString();
         }
 
         internal static string SerializeManifest(IEnumerable<ManifestModEntry> entries)
@@ -513,7 +613,7 @@ namespace CKAN.Games.KittenSpaceAgency
             foreach (var entry in entries)
             {
                 sb.Append("[[mods]]\n");
-                sb.Append($"id = \"{entry.Id}\"\n");
+                sb.Append($"id = \"{EscapeTomlBasicString(entry.Id)}\"\n");
                 sb.Append($"enabled = {(entry.Enabled ? "true" : "false")}\n");
                 foreach (var extra in entry.ExtraLines)
                 {

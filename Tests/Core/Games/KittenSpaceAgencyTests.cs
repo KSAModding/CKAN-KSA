@@ -244,6 +244,53 @@ namespace Tests.Core.Games
         }
 
         [Test]
+        public void SerializeManifest_ParseManifest_SpecialCharactersRoundTrip()
+        {
+            // A mod folder name may contain characters that break a naive TOML basic
+            // string (a double quote closes the string early; a backslash starts an
+            // escape). These are legal in file names on case-sensitive systems, so they
+            // must be escaped on write and decoded on read or the id is silently
+            // corrupted and the game's own parser can choke on the manifest.
+            var original = new List<ManifestModEntry>
+            {
+                new ManifestModEntry { Id = "quote\"mod",  Enabled = true },
+                new ManifestModEntry { Id = "back\\slash", Enabled = false },
+            };
+
+            var reparsed = KittenSpaceAgency.ParseManifest(
+                               KittenSpaceAgency.SerializeManifest(original));
+
+            Assert.AreEqual(original.Select(e => e.Id), reparsed.Select(e => e.Id));
+            Assert.AreEqual(original.Select(e => e.Enabled), reparsed.Select(e => e.Enabled));
+        }
+
+        [Test]
+        public void ParseValue_EscapedDoubleQuote_DecodedNotTruncated()
+        {
+            // Reading a game-written id that escapes a quote must yield the real value,
+            // not a value truncated at the inner quote.
+            Assert.AreEqual("a\"b", KittenSpaceAgency.ParseValue("\"a\\\"b\""));
+        }
+
+        [Test]
+        public void SerializeManifest_ControlCharacterInId_EscapedNotEmittedRaw()
+        {
+            // The game's Tomlet reader rejects a raw control character in a basic string,
+            // so DEL (U+007F) and the C0 controls must be written as \uXXXX escapes or the
+            // whole manifest fails to load.
+            var text = KittenSpaceAgency.SerializeManifest(new List<ManifestModEntry>
+            {
+                new ManifestModEntry { Id = "del\u007Fhere", Enabled = true },
+            });
+
+            StringAssert.Contains("\\u007F", text);
+            Assert.IsFalse(text.Contains('\u007F'), "a raw control char must not be emitted");
+            // And it still round-trips back to the original id.
+            var reparsed = KittenSpaceAgency.ParseManifest(text);
+            Assert.AreEqual("del\u007Fhere", reparsed[0].Id);
+        }
+
+        [Test]
         public void ReconcileManifest_NewlyInstalledMod_AddedAsEnabled()
         {
             // A mod CKAN just installed has no entry yet, so one must be added
