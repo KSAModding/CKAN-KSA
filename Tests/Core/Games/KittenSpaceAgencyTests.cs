@@ -404,7 +404,7 @@ namespace Tests.Core.Games
         [Test]
         public void AdjustCommandLine_NoStarMap_LaunchesKSAUnchanged()
         {
-            // no StarMap.Loader.exe under the mod root, launch line stays as-is
+            // no StarMap.exe under the mod root, launch line stays as-is
             var args = new[] { "KSA.exe", "-single-instance" };
 
             var adjusted = new KittenSpaceAgency().AdjustCommandLine(args, tempDir, fakeGameDir);
@@ -422,8 +422,10 @@ namespace Tests.Core.Games
             var adjusted = new KittenSpaceAgency().AdjustCommandLine(
                                new[] { "KSA.exe", "-single-instance" }, tempDir, fakeGameDir);
 
-            Assert.AreEqual(starMapExe, adjusted[0]);
-            Assert.AreEqual("-single-instance", adjusted[1]);
+            // StarMap loads and runs the game itself and its solo mode takes no
+            // arguments, so the launch line becomes just the StarMap exe: KSA's
+            // own args are dropped (a forwarded arg would be read as a pipe name).
+            CollectionAssert.AreEqual(new[] { starMapExe }, adjusted);
         }
 
         [Test]
@@ -501,6 +503,45 @@ namespace Tests.Core.Games
             Assert.AreEqual(true, (bool?)config["SomeFutureSetting"]);
         }
 
+        [Test]
+        public void AdjustCommandLine_MultipleStarMapFolders_PicksDeterministically()
+        {
+            // A leftover older StarMap folder next to the current one must not
+            // make the choice depend on filesystem enumeration order.
+            var older = Path.Combine(tempDir, "StarMapLauncher-0.4.4");
+            var newer = Path.Combine(tempDir, "StarMapLauncher-0.4.5");
+            Directory.CreateDirectory(older);
+            Directory.CreateDirectory(newer);
+            File.WriteAllText(Path.Combine(older, "StarMap.exe"), "");
+            File.WriteAllText(Path.Combine(newer, "StarMap.exe"), "");
+
+            var adjusted = new KittenSpaceAgency().AdjustCommandLine(
+                               new[] { "KSA.exe", "-single-instance" }, tempDir, fakeGameDir);
+
+            Assert.AreEqual(Path.Combine(newer, "StarMap.exe"), adjusted[0]);
+        }
+
+        [Test]
+        public void AdjustCommandLine_CorruptExistingConfig_DoesNotThrowAndRewrites()
+        {
+            // A blank or corrupt StarMapConfig.json (e.g. a partial write from a
+            // prior StarMap crash) must not crash the launch. AdjustCommandLine
+            // runs before PlayGame's own error handling, so it has to stay
+            // throw-free; the config is repaired and StarMap still launches.
+            var starMapExe = WriteFakeStarMapExe();
+            var configPath = Path.Combine(tempDir, StarMapTestFolder, "StarMapConfig.json");
+            File.WriteAllText(configPath, "{ this is not valid json");
+
+            string[] adjusted = Array.Empty<string>();
+            Assert.DoesNotThrow(() =>
+                adjusted = new KittenSpaceAgency().AdjustCommandLine(
+                    new[] { "KSA.exe", "-single-instance" }, tempDir, fakeGameDir));
+
+            Assert.AreEqual(starMapExe, adjusted[0]);
+            var config = JObject.Parse(File.ReadAllText(configPath));
+            Assert.AreEqual(fakeGameDir, (string?)config["GameLocation"]);
+        }
+
         private readonly string fakeGameDir = "C:/fake/Kitten Space Agency";
 
         // matches the real versioned folder name, not a fixed "StarMap"
@@ -510,7 +551,7 @@ namespace Tests.Core.Games
         {
             var starMapDir = Path.Combine(tempDir, StarMapTestFolder);
             Directory.CreateDirectory(starMapDir);
-            var starMapExe = Path.Combine(starMapDir, "StarMap.Loader.exe");
+            var starMapExe = Path.Combine(starMapDir, "StarMap.exe");
             File.WriteAllText(starMapExe, "");
             return starMapExe;
         }
