@@ -198,6 +198,9 @@ namespace CKAN
 
         /// <summary>
         /// Adds a game instance to config.
+        /// Warns if the instance shares its external mod directory with an
+        /// already registered instance, because CKAN mod operations in one of
+        /// them affect the others (each instance keeps its own registry).
         /// </summary>
         /// <returns>The resulting GameInstance object</returns>
         /// <exception cref="NotGameDirKraken">Thrown if the instance is not a valid game instance.</exception>
@@ -205,9 +208,18 @@ namespace CKAN
         {
             if (instance.Valid)
             {
+                var sharers = InstancesSharingModRoot(instance);
                 string name = instance.Name;
                 instances.Add(name, instance);
                 Configuration.SetRegistryToInstances(instances);
+                if (sharers.Length > 0)
+                {
+                    var otherNames = string.Join(", ", sharers.Select(other => other.Name));
+                    log.WarnFormat("Instance {0} shares its mod directory with: {1}",
+                                   name, otherNames);
+                    User.RaiseError(Properties.Resources.GameInstanceManagerSharedModRootWarning,
+                                    name, otherNames, instance.Game.ShortName);
+                }
             }
             else
             {
@@ -215,6 +227,26 @@ namespace CKAN
             }
             return instance;
         }
+
+        /// <summary>
+        /// Find already registered instances that use the same external mod
+        /// directory as the given instance.
+        /// A game that stores mods outside the game folder (KSA) has one mod
+        /// directory and one mod list per user, shared by every instance of
+        /// that game, while CKAN tracks the files it installs per instance.
+        /// </summary>
+        /// <param name="instance">The instance to compare against the registered ones</param>
+        /// <returns>The other registered instances sharing this instance's mod directory</returns>
+        internal GameInstance[] InstancesSharingModRoot(GameInstance instance)
+            => instance.Game.ModDirectoryIsExternal
+                   ? instances.Values
+                              .Where(other => !ReferenceEquals(other, instance)
+                                              && other.Game.ModDirectoryIsExternal
+                                              && string.Equals(CKANPathUtils.NormalizePath(other.Game.PrimaryModDirectory(other)),
+                                                               CKANPathUtils.NormalizePath(instance.Game.PrimaryModDirectory(instance)),
+                                                               Platform.PathComparison))
+                              .ToArray()
+                   : Array.Empty<GameInstance>();
 
         /// <summary>
         /// Adds a game instance to config.
