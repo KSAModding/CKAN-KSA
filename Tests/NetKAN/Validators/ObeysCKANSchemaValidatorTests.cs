@@ -63,6 +63,21 @@ namespace Tests.NetKAN.Validators
                 () => TryModule(json, null, "ksp_version", new JValue(kspVersion)));
         }
 
+        [Test,
+            TestCase(boringModule, "mods"),         // KSA user mods folder (the primary mod directory)
+            TestCase(boringModule, "mods/MyMod"),   // a subfolder under the KSA mods folder
+        ]
+        public void Validate_InstallToKsaMods_DoesNotThrow(string json, string installTo)
+        {
+            Assert.DoesNotThrow(
+                () => TryModule(json, null, "install",
+                                new JArray(new JObject
+                                {
+                                    ["find"]       = "MyMod",
+                                    ["install_to"] = installTo,
+                                })));
+        }
+
         public void Validate_InstallToGameDataSlashmods_DoesNotThrow()
         {
             Assert.DoesNotThrow(
