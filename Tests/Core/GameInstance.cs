@@ -310,6 +310,124 @@ namespace Tests.Core
             }
         }
 
+        [Test]
+        public void UnmanagedFiles_ExternalModRootSharedWithAnotherInstance_NotScanned()
+        {
+            // Two instances of an external-mod game share one external mods folder (like
+            // KSA). The shared root must not be scanned, because the other instance's
+            // CKAN-managed mods are unowned in this registry and would surface as
+            // unmanaged (and be deletable) from the wrong instance's window.
+            var gameDirA = TestData.NewTempDir();
+            var gameDirB = TestData.NewTempDir();
+            var extRoot  = TestData.NewTempDir();
+            try
+            {
+                var instA    = new GameInstance(ExternalModGame(extRoot).Object, gameDirA, "A");
+                var instB    = new GameInstance(ExternalModGame(extRoot).Object, gameDirB, "B");
+                var registry = CKAN.Registry.Empty(new RepositoryDataManager());
+
+                File.WriteAllText(Path.Combine(gameDirA, "readme.txt"), "");
+                var shared = Path.Combine(extRoot, "SomeMod", "plugin.dll");
+                Directory.CreateDirectory(Path.GetDirectoryName(shared)!);
+                File.WriteAllText(shared, "");
+
+                // Act: pass both instances so the shared root is detected.
+                var unmanaged = instA.UnmanagedFiles(registry, new[] { instA, instB }).ToArray();
+
+                // Assert: only A's own GameDir file, the shared external file is skipped.
+                CollectionAssert.AreEquivalent(new[] { "readme.txt" }, unmanaged);
+
+                // And with only this instance passed, the external root is scanned again.
+                var soleUser = instA.UnmanagedFiles(registry, new[] { instA }).ToArray();
+                CollectionAssert.Contains(soleUser, "mods/SomeMod/plugin.dll");
+
+                // The gate must not depend on this instance being in the list: if A is
+                // omitted but sibling B (which shares the root) is present, the shared
+                // root is still skipped, so the gate cannot fail open.
+                var selfOmitted = instA.UnmanagedFiles(registry, new[] { instB }).ToArray();
+                CollectionAssert.DoesNotContain(selfOmitted, "mods/SomeMod/plugin.dll");
+            }
+            finally
+            {
+                Directory.Delete(gameDirA, true);
+                Directory.Delete(gameDirB, true);
+                Directory.Delete(extRoot, true);
+            }
+        }
+
+        [Test]
+        public void UnmanagedFiles_LiteralModsFolderInGameDir_ExcludedFromExternalMapping()
+        {
+            // A real <GameDir>/mods folder maps to the same "mods/..." key as the external
+            // root, and ToAbsoluteGameDir always resolves that key back to the external
+            // root, so surfacing it would let a delete or show-in-folder hit the wrong
+            // file (and a same-named pair would collide under Distinct). The whole subtree
+            // is excluded; only the external file keeps the "mods/..." key.
+            var gameDir = TestData.NewTempDir();
+            var extRoot = TestData.NewTempDir();
+            try
+            {
+                var inst     = new GameInstance(ExternalModGame(extRoot).Object, gameDir, "collide-test");
+                var registry = CKAN.Registry.Empty(new RepositoryDataManager());
+
+                // A GameDir/mods file whose key would collide with an external file of the
+                // same name, plus a GameDir/mods file with a unique name.
+                var gameDirCollide = Path.Combine(gameDir, "mods", "SomeMod", "plugin.dll");
+                Directory.CreateDirectory(Path.GetDirectoryName(gameDirCollide)!);
+                File.WriteAllText(gameDirCollide, "");
+                var gameDirUnique = Path.Combine(gameDir, "mods", "OnlyHere", "note.txt");
+                Directory.CreateDirectory(Path.GetDirectoryName(gameDirUnique)!);
+                File.WriteAllText(gameDirUnique, "");
+                var external = Path.Combine(extRoot, "SomeMod", "plugin.dll");
+                Directory.CreateDirectory(Path.GetDirectoryName(external)!);
+                File.WriteAllText(external, "");
+
+                // Act
+                var unmanaged = inst.UnmanagedFiles(registry).ToArray();
+
+                // Assert: the external file surfaces exactly once (no collision), and no
+                // <GameDir>/mods file is surfaced (neither the colliding nor the unique
+                // one), so nothing can mis-resolve to the external root.
+                Assert.AreEqual(1, unmanaged.Count(p => p == "mods/SomeMod/plugin.dll"));
+                CollectionAssert.DoesNotContain(unmanaged, "mods/OnlyHere/note.txt");
+            }
+            finally
+            {
+                Directory.Delete(gameDir, true);
+                Directory.Delete(extRoot, true);
+            }
+        }
+
+        [Test]
+        public void UnmanagedFiles_BareModsFileInGameDir_Excluded()
+        {
+            // An extensionless file literally named "mods" at the game root maps to the
+            // bare "mods" key, which ToAbsoluteGameDir resolves to the external root
+            // directory, so it must be excluded too, not just the mods/ subtree.
+            var gameDir = TestData.NewTempDir();
+            var extRoot = TestData.NewTempDir();
+            try
+            {
+                var inst     = new GameInstance(ExternalModGame(extRoot).Object, gameDir, "bare-mods-test");
+                var registry = CKAN.Registry.Empty(new RepositoryDataManager());
+
+                File.WriteAllText(Path.Combine(gameDir, "mods"), "");
+                File.WriteAllText(Path.Combine(gameDir, "readme.txt"), "");
+
+                // Act
+                var unmanaged = inst.UnmanagedFiles(registry).ToArray();
+
+                // Assert: the bare "mods" file is excluded, an ordinary GameDir file shows.
+                CollectionAssert.DoesNotContain(unmanaged, "mods");
+                CollectionAssert.Contains(unmanaged, "readme.txt");
+            }
+            finally
+            {
+                Directory.Delete(gameDir, true);
+                Directory.Delete(extRoot, true);
+            }
+        }
+
         // A minimal fake game whose mod directory lives outside GameDir (like KSA),
         // pointed at a caller-controlled folder so the external-root scan can be
         // exercised without touching the real Documents mods folder. DetectVersion
