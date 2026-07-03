@@ -354,13 +354,42 @@ namespace CKAN
         /// <param name="registry">A Registry object that knows which files CKAN installed in this folder</param>
         /// <returns>Relative file paths as strings</returns>
         public IEnumerable<string> UnmanagedFiles(Registry registry)
-            => Directory.EnumerateFiles(GameDir, "*", SearchOption.AllDirectories)
+            => UnmanagedScanRoots
+                        .SelectMany(root => Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
                         .Select(CKANPathUtils.NormalizePath)
                         .Where(absPath => !absPath.StartsWith(CkanDir))
                         .Select(ToRelativeGameDir)
                         .Where(relPath =>
                             !Game.StockFolders.Any(f => relPath.StartsWith($"{f}/"))
-                            && registry.FileOwner(relPath) == null);
+                            && registry.FileOwner(relPath) == null)
+                        // The scan roots are disjoint for KSA, but de-duplicate so the
+                        // result is a set of unique paths regardless of how a game maps
+                        // its mod root.
+                        .Distinct();
+
+        /// <summary>
+        /// The directories the unmanaged-files scan walks: always GameDir, plus the
+        /// external mod root for games (KSA) whose mods live outside GameDir, so files
+        /// a user dropped there by hand are surfaced too. GameDir is yielded
+        /// unconditionally, so a missing game folder surfaces exactly as it did before;
+        /// the external root is only added when it exists, since it may not have been
+        /// created yet (no mods installed).
+        /// </summary>
+        private IEnumerable<string> UnmanagedScanRoots
+        {
+            get
+            {
+                yield return GameDir;
+                if (Game.ModDirectoryIsExternal)
+                {
+                    var externalModRoot = Game.PrimaryModDirectory(this);
+                    if (Directory.Exists(externalModRoot))
+                    {
+                        yield return externalModRoot;
+                    }
+                }
+            }
+        }
 
         /// <summary>
         /// Check whether a given path contains any files or folders installed by CKAN

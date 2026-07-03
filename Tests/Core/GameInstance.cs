@@ -1,12 +1,16 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Collections.Generic;
 
+using Moq;
 using NUnit.Framework;
 
 using CKAN;
 using CKAN.IO;
+using CKAN.Games;
 using CKAN.Games.KerbalSpaceProgram;
+using CKAN.Versioning;
 
 using Tests.Data;
 
@@ -199,6 +203,129 @@ namespace Tests.Core
                 CollectionAssert.AreEquivalent(new string[] { "Mod1", "Mod2", "Mod3" },
                                                inst.KSP.GetSuppressedCompatWarningIdentifiers);
             }
+        }
+
+        [Test]
+        public void UnmanagedFiles_ExternalModRoot_SurfacesDroppedFiles()
+        {
+            // Arrange: a game (like KSA) whose mod root lives outside GameDir.
+            var gameDir = TestData.NewTempDir();
+            var extRoot = TestData.NewTempDir();
+            try
+            {
+                var inst     = new GameInstance(ExternalModGame(extRoot).Object, gameDir, "ext-test");
+                var registry = CKAN.Registry.Empty(new RepositoryDataManager());
+
+                // A plain file in GameDir, and a mod folder a user dropped into the
+                // external mod root by hand.
+                File.WriteAllText(Path.Combine(gameDir, "readme.txt"), "");
+                var dropped = Path.Combine(extRoot, "SomeMod", "plugin.dll");
+                Directory.CreateDirectory(Path.GetDirectoryName(dropped)!);
+                File.WriteAllText(dropped, "");
+
+                // Act
+                var unmanaged = inst.UnmanagedFiles(registry).ToArray();
+
+                // Assert: exactly the GameDir file and the external file (under the
+                // "mods" prefix) are surfaced, with no duplicates or extras.
+                CollectionAssert.AreEquivalent(
+                    new[] { "readme.txt", "mods/SomeMod/plugin.dll" },
+                    unmanaged);
+            }
+            finally
+            {
+                Directory.Delete(gameDir, true);
+                Directory.Delete(extRoot, true);
+            }
+        }
+
+        [Test]
+        public void UnmanagedFiles_ExternalModRoot_ExcludesManagedFiles()
+        {
+            // Arrange: a CKAN-managed mod and a hand-dropped file, both under the
+            // external mod root.
+            var gameDir = TestData.NewTempDir();
+            var extRoot = TestData.NewTempDir();
+            try
+            {
+                var inst     = new GameInstance(ExternalModGame(extRoot).Object, gameDir, "ext-managed-test");
+                var registry = CKAN.Registry.Empty(new RepositoryDataManager());
+
+                var managed = Path.Combine(extRoot, "ManagedMod", "managed.dll");
+                Directory.CreateDirectory(Path.GetDirectoryName(managed)!);
+                File.WriteAllText(managed, "");
+                var dropped = Path.Combine(extRoot, "DroppedMod", "dropped.dll");
+                Directory.CreateDirectory(Path.GetDirectoryName(dropped)!);
+                File.WriteAllText(dropped, "");
+
+                // Tell the registry CKAN installed the managed file. Its registry key
+                // goes through the same "mods/" mapping that UnmanagedFiles uses to
+                // look owners up, so this exercises that round-trip.
+                registry.RegisterModule(
+                    CkanModule.FromJson(@"{
+                        ""spec_version"": 1,
+                        ""identifier"":   ""ManagedMod"",
+                        ""author"":       ""tester"",
+                        ""version"":      ""1.0"",
+                        ""download"":     ""https://github.com/""
+                    }"),
+                    new[] { managed }, inst, false);
+
+                // Act
+                var unmanaged = inst.UnmanagedFiles(registry).ToArray();
+
+                // Assert: the managed mod's file is filtered out, the hand-dropped one
+                // is still surfaced.
+                CollectionAssert.DoesNotContain(unmanaged, "mods/ManagedMod/managed.dll");
+                CollectionAssert.Contains(unmanaged, "mods/DroppedMod/dropped.dll");
+            }
+            finally
+            {
+                Directory.Delete(gameDir, true);
+                Directory.Delete(extRoot, true);
+            }
+        }
+
+        [Test]
+        public void UnmanagedFiles_ExternalModRootMissing_DoesNotThrow()
+        {
+            // Arrange: the external mod root does not exist yet (no mods installed).
+            var gameDir = TestData.NewTempDir();
+            var extRoot = Path.Combine(TestData.NewTempDir(), "does-not-exist");
+            try
+            {
+                var inst     = new GameInstance(ExternalModGame(extRoot).Object, gameDir, "ext-missing-test");
+                var registry = CKAN.Registry.Empty(new RepositoryDataManager());
+                File.WriteAllText(Path.Combine(gameDir, "readme.txt"), "");
+
+                // Act & Assert: the missing external root is skipped, GameDir still scanned.
+                var unmanaged = Array.Empty<string>();
+                Assert.DoesNotThrow(() => unmanaged = inst.UnmanagedFiles(registry).ToArray());
+                CollectionAssert.Contains(unmanaged, "readme.txt");
+            }
+            finally
+            {
+                Directory.Delete(Path.GetDirectoryName(extRoot)!, true);
+                Directory.Delete(gameDir, true);
+            }
+        }
+
+        // A minimal fake game whose mod directory lives outside GameDir (like KSA),
+        // pointed at a caller-controlled folder so the external-root scan can be
+        // exercised without touching the real Documents mods folder. DetectVersion
+        // returns null so construction takes the empty-compatible-versions path and
+        // needs no build map.
+        private static Mock<IGame> ExternalModGame(string externalModRoot)
+        {
+            var game = new Mock<IGame>();
+            game.Setup(g => g.ShortName).Returns("FakeExternal");
+            game.Setup(g => g.CompatibleVersionsFile).Returns("compatible_versions.json");
+            game.Setup(g => g.DetectVersion(It.IsAny<DirectoryInfo>())).Returns((GameVersion?)null);
+            game.Setup(g => g.StockFolders).Returns(Array.Empty<string>());
+            game.Setup(g => g.PrimaryModDirectoryRelative).Returns("mods");
+            game.Setup(g => g.ModDirectoryIsExternal).Returns(true);
+            game.Setup(g => g.PrimaryModDirectory(It.IsAny<GameInstance>())).Returns(externalModRoot);
+            return game;
         }
     }
 }
