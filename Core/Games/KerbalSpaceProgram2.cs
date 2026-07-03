@@ -126,7 +126,7 @@ namespace CKAN.Games.KerbalSpaceProgram2
                                          .Select(url => url.ToString()))
                          .ToArray();
 
-        public string[] AdjustCommandLine(string[] args, GameVersion? installedVersion, GameInstance inst)
+        public string[] AdjustCommandLine(string[] args, GameVersion? installedVersion)
             => args;
 
         public IDlcDetector[] DlcDetectors => Array.Empty<IDlcDetector>();
