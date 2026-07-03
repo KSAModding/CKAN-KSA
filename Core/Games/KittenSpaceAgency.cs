@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -323,8 +324,48 @@ namespace CKAN.Games.KittenSpaceAgency
             {
                 log.Info("   " + installedModule.Module.name);
             }
-            UpdateManifestFile(installedModules.Select(im => im.identifier).ToHashSet(),
-                                manifestPath, manifestManagedModsPath);
+            try
+            {
+                // The game keys manifest entries on the mod's on-disk folder name under
+                // the mods directory, not on the CKAN identifier, so derive the folder
+                // names from the installed files rather than assuming identifier == folder.
+                var modFolders = ModFolderNames(installedModules.SelectMany(im => im.Files),
+                                                PrimaryModDirectoryRelative);
+                UpdateManifestFile(modFolders, manifestPath, manifestManagedModsPath);
+            }
+            catch (Exception e)
+            {
+                // Keeping the manifest in sync is a best-effort side effect, so a
+                // failure here must never surface as an error after an otherwise
+                // successful install or uninstall.
+                log.WarnFormat("Could not sync the KSA manifest");
+                log.Debug(e);
+            }
+        }
+
+        // The distinct top-level folder names the installed files occupy under the
+        // mod directory (e.g. "mods"). These are the ids the game reads from
+        // manifest.toml, since it discovers mods by folder name (ModLibrary.AddMods
+        // uses the directory name; ModEntry.Exists checks mods/<id>/mod.toml).
+        internal static HashSet<string> ModFolderNames(IEnumerable<string> installedFiles,
+                                                       string              modDirectoryRelative)
+        {
+            var prefix = modDirectoryRelative + "/";
+            // Case-insensitive on Windows, matching the file system and the game.
+            var files  = installedFiles.Select(CKANPathUtils.NormalizePath)
+                                       .ToHashSet(Platform.PathComparer);
+            return files.Where(f => f.StartsWith(prefix, Platform.PathComparison))
+                        .Select(f => f[prefix.Length..])
+                        .Select(rest => (rest, slash: rest.IndexOf('/')))
+                        // A mod is a folder under the mod directory (mods/<folder>/...),
+                        // so a loose file directly under mods/ with no subpath is not one.
+                        .Where(x => x.slash > 0)
+                        .Select(x => x.rest[..x.slash])
+                        // And it counts only if it actually contains a mod.toml, exactly
+                        // as the game decides (ModLibrary.AddMods / ModEntry.Exists check
+                        // mods/<folder>/mod.toml); a bundled data-only folder is not a mod.
+                        .Where(folder => files.Contains($"{prefix}{folder}/mod.toml"))
+                        .ToHashSet(Platform.PathComparer);
         }
 
         // manifestPath/managedModsPath are separate args so tests can point them
@@ -351,7 +392,10 @@ namespace CKAN.Games.KittenSpaceAgency
                 SerializeManifest(updated).WriteThroughTo(manifestPath);
 
                 new FileInfo(managedModsPath).Directory?.Create();
-                JsonConvert.SerializeObject(currentIdentifiers).WriteThroughTo(managedModsPath);
+                // Serialize in a stable order so the file does not churn between runs.
+                JsonConvert.SerializeObject(
+                    currentIdentifiers.OrderBy(id => id, StringComparer.Ordinal))
+                    .WriteThroughTo(managedModsPath);
             }
             catch (Exception e)
             {
@@ -367,17 +411,20 @@ namespace CKAN.Games.KittenSpaceAgency
         {
             try
             {
-                return File.Exists(managedModsPath)
+                var managed = File.Exists(managedModsPath)
                     ? JsonConvert.DeserializeObject<HashSet<string>>(File.ReadAllText(managedModsPath))
-                      ?? new HashSet<string>()
-                    : new HashSet<string>();
+                    : null;
+                // Match mod folder names the way the file system does (case-insensitive
+                // on Windows) so a casing difference does not duplicate an entry.
+                return new HashSet<string>(managed ?? Enumerable.Empty<string>(),
+                                           Platform.PathComparer);
             }
             catch (Exception e)
             {
                 log.WarnFormat("Could not read managed mods list at: {0}, treating as empty",
                                managedModsPath);
                 log.Debug(e);
-                return new HashSet<string>();
+                return new HashSet<string>(Platform.PathComparer);
             }
         }
 
@@ -397,7 +444,9 @@ namespace CKAN.Games.KittenSpaceAgency
         internal sealed class ManifestModEntry
         {
             public string Id = "";
-            public bool Enabled;
+            // Defaults to true to match the game's ModEntry, which treats an entry
+            // with no enabled key as active.
+            public bool Enabled = true;
             public List<string> ExtraLines = new List<string>();
         }
 
@@ -418,26 +467,144 @@ namespace CKAN.Games.KittenSpaceAgency
                     continue;
                 }
                 var eq = line.IndexOf('=');
-                if (current == null || line.Length == 0 || eq < 1)
+                // Skip the preamble, blank separators, and comment lines. Comments are
+                // dropped rather than carried, so we never reposition a user's section
+                // header on rewrite; the game does not use them anyway.
+                if (current == null || line.Length == 0 || eq < 1 || line.StartsWith("#"))
                 {
                     continue;
                 }
-                var key   = line[..eq].Trim();
-                var value = line[(eq + 1)..].Trim();
+                var key = line[..eq].Trim();
                 switch (key)
                 {
                     case "id":
-                        current.Id = value.Trim('"');
+                        current.Id = ParseValue(line[(eq + 1)..]);
                         break;
                     case "enabled":
-                        current.Enabled = value == "true";
+                        current.Enabled = ParseValue(line[(eq + 1)..]) == "true";
                         break;
                     default:
+                        // Keys we do not understand round trip verbatim.
                         current.ExtraLines.Add(line);
                         break;
                 }
             }
             return entries;
+        }
+
+        // Read a TOML scalar, stripping surrounding quotes and any trailing inline
+        // comment. Covers the double quoted (with backslash escapes), single quoted
+        // literal, and bare forms a hand editor or CKAN's own writer can produce, so a
+        // value like `true # note`, `'MyMod'`, or an id whose folder name contains an
+        // escaped quote (`"a\"b"`) is read correctly instead of being truncated. The game
+        // itself writes the file by hand without escaping, but reads it back with Tomlet.
+        internal static string ParseValue(string raw)
+        {
+            var s = raw.Trim();
+            if (s.Length > 0 && s[0] == '"')
+            {
+                // Basic string: honor backslash escapes, stop at the first unescaped
+                // closing quote (so a trailing inline comment is ignored too).
+                return UnescapeTomlBasicString(s);
+            }
+            if (s.Length > 0 && s[0] == '\'')
+            {
+                // Literal string: no escaping, verbatim until the next single quote.
+                var close = s.IndexOf('\'', 1);
+                return close > 0 ? s[1..close] : s[1..];
+            }
+            var hash = s.IndexOf('#');
+            return (hash >= 0 ? s[..hash] : s).Trim();
+        }
+
+        // Decode the body of a TOML basic string (a value beginning with a double
+        // quote), resolving the escape sequences we emit plus the other standard ones,
+        // and stopping at the first unescaped closing quote.
+        private static string UnescapeTomlBasicString(string s)
+        {
+            var sb = new StringBuilder(s.Length);
+            for (var i = 1; i < s.Length; i++)
+            {
+                var c = s[i];
+                if (c == '"')
+                {
+                    break;
+                }
+                if (c == '\\' && i + 1 < s.Length)
+                {
+                    var next = s[++i];
+                    switch (next)
+                    {
+                        case '"':  sb.Append('"');  break;
+                        case '\\': sb.Append('\\'); break;
+                        case 'b':  sb.Append('\b'); break;
+                        case 't':  sb.Append('\t'); break;
+                        case 'n':  sb.Append('\n'); break;
+                        case 'f':  sb.Append('\f'); break;
+                        case 'r':  sb.Append('\r'); break;
+                        case 'u':
+                            // A four digit hex code point (\uXXXX).
+                            if (i + 4 < s.Length
+                                && ushort.TryParse(s.Substring(i + 1, 4),
+                                                   NumberStyles.HexNumber,
+                                                   CultureInfo.InvariantCulture,
+                                                   out var code))
+                            {
+                                sb.Append((char)code);
+                                i += 4;
+                            }
+                            else
+                            {
+                                sb.Append(next);
+                            }
+                            break;
+                        default:
+                            // Unknown escape: keep the character after the backslash.
+                            sb.Append(next);
+                            break;
+                    }
+                }
+                else
+                {
+                    sb.Append(c);
+                }
+            }
+            return sb.ToString();
+        }
+
+        // Encode a string as the body of a TOML basic string (the part between the
+        // quotes), escaping the characters that would otherwise break the double quoted
+        // form so an id containing a quote, backslash, or control character round trips.
+        private static string EscapeTomlBasicString(string s)
+        {
+            var sb = new StringBuilder(s.Length);
+            foreach (var c in s)
+            {
+                switch (c)
+                {
+                    case '"':  sb.Append("\\\""); break;
+                    case '\\': sb.Append("\\\\"); break;
+                    case '\b': sb.Append("\\b");  break;
+                    case '\t': sb.Append("\\t");  break;
+                    case '\n': sb.Append("\\n");  break;
+                    case '\f': sb.Append("\\f");  break;
+                    case '\r': sb.Append("\\r");  break;
+                    default:
+                        // TOML basic strings must escape the C0 controls (< U+0020) and
+                        // U+007F (DEL); the game's Tomlet reader rejects any of them raw.
+                        if (c < ' ' || c == '\u007F')
+                        {
+                            sb.Append("\\u")
+                              .Append(((int)c).ToString("X4", CultureInfo.InvariantCulture));
+                        }
+                        else
+                        {
+                            sb.Append(c);
+                        }
+                        break;
+                }
+            }
+            return sb.ToString();
         }
 
         internal static string SerializeManifest(IEnumerable<ManifestModEntry> entries)
@@ -446,7 +613,7 @@ namespace CKAN.Games.KittenSpaceAgency
             foreach (var entry in entries)
             {
                 sb.Append("[[mods]]\n");
-                sb.Append($"id = \"{entry.Id}\"\n");
+                sb.Append($"id = \"{EscapeTomlBasicString(entry.Id)}\"\n");
                 sb.Append($"enabled = {(entry.Enabled ? "true" : "false")}\n");
                 foreach (var extra in entry.ExtraLines)
                 {
@@ -457,26 +624,39 @@ namespace CKAN.Games.KittenSpaceAgency
             return sb.ToString();
         }
 
-        // Make sure every currently installed mod has an enabled entry, and drop
-        // entries for mods CKAN used to manage that are no longer installed.
-        // Entries CKAN has never managed are left alone either way.
+        // Give a newly installed mod an enabled entry, drop entries for mods CKAN used
+        // to manage that are no longer installed, and leave every entry already present
+        // untouched. The enabled state of an existing entry is deliberately never
+        // changed, so a mod the user disabled in-game stays disabled even when an
+        // unrelated CKAN operation rewrites the manifest. previouslyManaged is only
+        // consulted to decide what CKAN may remove (never to decide enabled state), so
+        // a stale or empty managed set can at worst leave an orphan entry (which the
+        // game prunes on the next launch), never re-enable a mod behind the user's back.
         internal static List<ManifestModEntry> ReconcileManifest(
                 List<ManifestModEntry> entries,
                 HashSet<string>        previouslyManaged,
                 HashSet<string>        currentIdentifiers)
         {
+            // Drop entries for mods CKAN used to manage but that are no longer installed.
             entries.RemoveAll(e => previouslyManaged.Contains(e.Id)
                                    && !currentIdentifiers.Contains(e.Id));
-            foreach (var identifier in currentIdentifiers)
+            // Add newly installed mods in a stable (sorted) order so the manifest does
+            // not churn its ordering between otherwise identical runs.
+            foreach (var identifier in currentIdentifiers.OrderBy(id => id, StringComparer.Ordinal))
             {
-                var entry = entries.Find(e => e.Id == identifier);
+                var entry = entries.Find(e => string.Equals(e.Id, identifier, Platform.PathComparison));
                 if (entry == null)
                 {
+                    // Not in the manifest yet, so it is newly installed: enable it.
                     entries.Add(new ManifestModEntry { Id = identifier, Enabled = true });
                 }
                 else
                 {
-                    entry.Enabled = true;
+                    // Already present: leave its enabled state alone (respecting a
+                    // deliberate in-game disable). Only adopt the current on-disk casing
+                    // so the game, which matches folder names ordinally, does not add a
+                    // duplicate entry.
+                    entry.Id = identifier;
                 }
             }
             return entries;
