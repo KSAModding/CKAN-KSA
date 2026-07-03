@@ -354,13 +354,82 @@ namespace CKAN
         /// <param name="registry">A Registry object that knows which files CKAN installed in this folder</param>
         /// <returns>Relative file paths as strings</returns>
         public IEnumerable<string> UnmanagedFiles(Registry registry)
-            => Directory.EnumerateFiles(GameDir, "*", SearchOption.AllDirectories)
+            => UnmanagedFiles(registry, Array.Empty<GameInstance>());
+
+        /// <summary>
+        /// Generate a sequence of files in the game folder that weren't installed by CKAN.
+        /// </summary>
+        /// <param name="registry">A Registry object that knows which files CKAN installed in this folder</param>
+        /// <param name="allInstances">
+        /// Every registered game instance, used to decide whether the external mod root
+        /// (for games like KSA that share one out-of-GameDir mods folder) is also used by
+        /// another instance. When it is, that folder is left unscanned, because another
+        /// instance's CKAN-managed mods are unowned in this instance's registry and would
+        /// otherwise surface here as unmanaged (and be deletable from the wrong instance).
+        /// The parameterless overload passes an empty list, which scans the external root
+        /// as before for the common single-instance case.
+        /// </param>
+        /// <returns>Relative file paths as strings</returns>
+        public IEnumerable<string> UnmanagedFiles(Registry registry,
+                                                  IEnumerable<GameInstance> allInstances)
+        {
+            // For an external-mod game, a literal <GameDir>/mods entry maps to the same
+            // "mods/..." registry key as the external mod root, and ToAbsoluteGameDir
+            // always resolves that key back to the external root. Surfacing such a file
+            // would let delete or show-in-folder act on the wrong file, and its key could
+            // collide with an external file's under Distinct(), so exclude that path: the
+            // whole mods/ subtree and the degenerate bare file of the same name, matching
+            // the Equals-or-StartsWith mapping in ToRelativeGameDir. The external root is
+            // the sole owner of the "mods/" key space.
+            var gameDirModDir = Game.ModDirectoryIsExternal
+                ? CKANPathUtils.NormalizePath(Path.Combine(GameDir, Game.PrimaryModDirectoryRelative))
+                : null;
+            return UnmanagedScanRoots(allInstances)
+                        .SelectMany(root => Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
                         .Select(CKANPathUtils.NormalizePath)
-                        .Where(absPath => !absPath.StartsWith(CkanDir))
+                        .Where(absPath => !absPath.StartsWith(CkanDir)
+                                          && (gameDirModDir == null
+                                              || !(absPath.Equals(gameDirModDir, Platform.PathComparison)
+                                                   || absPath.StartsWith($"{gameDirModDir}/", Platform.PathComparison))))
                         .Select(ToRelativeGameDir)
                         .Where(relPath =>
                             !Game.StockFolders.Any(f => relPath.StartsWith($"{f}/"))
-                            && registry.FileOwner(relPath) == null);
+                            && registry.FileOwner(relPath) == null)
+                        // The scan roots are disjoint for KSA, but de-duplicate so the
+                        // result is a set of unique paths regardless of how a game maps
+                        // its mod root.
+                        .Distinct();
+        }
+
+        /// <summary>
+        /// The directories the unmanaged-files scan walks: always GameDir, plus the
+        /// external mod root for games (KSA) whose mods live outside GameDir, so files
+        /// a user dropped there by hand are surfaced too. GameDir is yielded
+        /// unconditionally, so a missing game folder surfaces exactly as it did before.
+        /// The external root is only added when it exists (it may not have been created
+        /// yet) and when no OTHER registered instance shares it. Counting only instances
+        /// other than this one keeps the gate independent of whether the caller includes
+        /// this instance in the list, so it cannot fail open; the parameterless overload
+        /// passes an empty list, so a lone instance still scans.
+        /// </summary>
+        private IEnumerable<string> UnmanagedScanRoots(IEnumerable<GameInstance> allInstances)
+        {
+            yield return GameDir;
+            if (Game.ModDirectoryIsExternal)
+            {
+                var externalModRoot = Game.PrimaryModDirectory(this);
+                var normModRoot     = CKANPathUtils.NormalizePath(externalModRoot);
+                var otherSharers = allInstances.Count(other =>
+                    !ReferenceEquals(other, this)
+                    && other.Game.ModDirectoryIsExternal
+                    && string.Equals(CKANPathUtils.NormalizePath(other.Game.PrimaryModDirectory(other)),
+                                     normModRoot, Platform.PathComparison));
+                if (otherSharers == 0 && Directory.Exists(externalModRoot))
+                {
+                    yield return externalModRoot;
+                }
+            }
+        }
 
         /// <summary>
         /// Check whether a given path contains any files or folders installed by CKAN

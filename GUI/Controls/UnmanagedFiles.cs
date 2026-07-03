@@ -30,12 +30,14 @@ namespace CKAN.GUI
         }
 
         [MemberNotNull(nameof(inst), nameof(user), nameof(registry))]
-        public void LoadFiles(GameInstance          inst,
-                              RepositoryDataManager repoData,
-                              IUser                 user)
+        public void LoadFiles(GameInstance              inst,
+                              RepositoryDataManager     repoData,
+                              IUser                     user,
+                              IEnumerable<GameInstance> allInstances)
         {
-            this.inst = inst;
-            this.user = user;
+            this.inst         = inst;
+            this.user         = user;
+            this.allInstances = allInstances;
             registry = RegistryManager.Instance(inst, repoData).registry;
             Util.Invoke(this, _UpdateGameFolderTree);
         }
@@ -70,7 +72,7 @@ namespace CKAN.GUI
                 UseWaitCursor = true;
                 Task.Run(() =>
                 {
-                    var paths = inst.UnmanagedFiles(registry).ToArray()
+                    var paths = inst.UnmanagedFiles(registry, allInstances).ToArray()
                         ?? Array.Empty<string>();
                     Util.Invoke(this, () =>
                     {
@@ -236,9 +238,10 @@ namespace CKAN.GUI
             Done?.Invoke();
         }
 
-        private GameInstance? inst;
-        private IUser?        user;
-        private Registry?     registry;
+        private GameInstance?             inst;
+        private IUser?                    user;
+        private Registry?                 registry;
+        private IEnumerable<GameInstance> allInstances = Array.Empty<GameInstance>();
         private static readonly ILog log = LogManager.GetLogger(typeof(UnmanagedFiles));
     }
 

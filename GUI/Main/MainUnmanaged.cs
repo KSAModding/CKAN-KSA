@@ -11,7 +11,8 @@ namespace CKAN.GUI
         {
             if (Manager.CurrentInstance != null)
             {
-                UnmanagedFiles.LoadFiles(Manager.CurrentInstance, repoData, currentUser);
+                UnmanagedFiles.LoadFiles(Manager.CurrentInstance, repoData, currentUser,
+                                         Manager.Instances.Values);
                 tabController.ShowTab(UnmanagedFilesTabPage.Name, 2);
                 DisableMainWindow();
             }
