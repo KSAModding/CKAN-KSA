@@ -489,6 +489,15 @@
                     "description" : "KSP2 BepInEx plugins folder",
                     "type"        : "string",
                     "pattern"     : "^BepInEx/plugins$"
+                },
+                {
+                    "description" : "KSA default mods folder",
+                    "enum"        : [ "mods" ]
+                },
+                {
+                    "description" : "KSA default mods folder with subfolder",
+                    "type"        : "string",
+                    "pattern"     : "^mods/"
                 }
             ]
         },
