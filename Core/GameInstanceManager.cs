@@ -207,6 +207,9 @@ namespace CKAN
         /// <returns>The resulting GameInstance object</returns>
         /// <exception cref="NotGameDirKraken">Thrown if the instance is not a valid game instance.</exception>
         public GameInstance AddInstance(GameInstance instance, IUser? user = null)
+            => AddInstance(instance, user, warnSharedModRoot: true);
+
+        private GameInstance AddInstance(GameInstance instance, IUser? user, bool warnSharedModRoot)
         {
             if (instance.Valid)
             {
@@ -216,11 +219,12 @@ namespace CKAN
                 Configuration.SetRegistryToInstances(instances);
                 if (sharers.Length > 0)
                 {
-                    var otherNames = string.Join(", ", sharers.Select(other => other.Name));
                     log.WarnFormat("Instance {0} shares its mod directory with: {1}",
-                                   name, otherNames);
-                    (user ?? User).RaiseError(Properties.Resources.GameInstanceManagerSharedModRootWarning,
-                                              name, otherNames, instance.Game.ShortName);
+                                   name, string.Join(", ", sharers.Select(other => other.Name)));
+                    if (warnSharedModRoot)
+                    {
+                        (user ?? User).RaiseError("{0}", SharedModRootWarning(instance, sharers));
+                    }
                 }
             }
             else
@@ -229,6 +233,14 @@ namespace CKAN
             }
             return instance;
         }
+
+        // The rendered shared-mod-root warning, shared by the warning and
+        // confirmation paths so both always tell the same story.
+        private static string SharedModRootWarning(GameInstance instance, GameInstance[] sharers)
+            => string.Format(Properties.Resources.GameInstanceManagerSharedModRootWarning,
+                             instance.Name,
+                             string.Join(", ", sharers.Select(other => other.Name)),
+                             instance.Game.ShortName);
 
         /// <summary>
         /// Find already registered instances that use the same external mod
@@ -252,16 +264,36 @@ namespace CKAN
 
         /// <summary>
         /// Adds a game instance to config.
+        /// This is the interactive front door (GUI add dialog, CmdLine
+        /// `instance add`, ConsoleUI screens): when the instance would share
+        /// its external mod directory with an already registered one, the user
+        /// is asked to confirm and can decline, unlike the non-interactive
+        /// paths (Steam import, clone, fake, autodetection), which register
+        /// with a warning.
         /// </summary>
         /// <param name="path">The path of the instance</param>
         /// <param name="name">The name of the instance</param>
         /// <param name="user">IUser object for interaction</param>
-        /// <returns>The resulting GameInstance object</returns>
+        /// <returns>The resulting GameInstance object, or null if the user declined</returns>
         /// <exception cref="NotGameDirKraken">Thrown if the instance is not a valid game instance.</exception>
         public GameInstance? AddInstance(string path, string name, IUser user)
         {
             var game = DetermineGame(new DirectoryInfo(path), user);
-            return game == null ? null : AddInstance(new GameInstance(game, path, name), user);
+            if (game == null)
+            {
+                return null;
+            }
+            var instance = new GameInstance(game, path, name);
+            if (instance.Valid
+                && InstancesSharingModRoot(instance) is { Length: > 0 } sharers
+                && !user.RaiseYesNoDialog(SharedModRootWarning(instance, sharers)
+                                          + Environment.NewLine
+                                          + Properties.Resources.GameInstanceManagerSharedModRootPrompt))
+            {
+                return null;
+            }
+            // The user already confirmed, don't warn again
+            return AddInstance(instance, user, warnSharedModRoot: false);
         }
 
         /// <summary>

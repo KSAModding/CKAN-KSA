@@ -254,9 +254,13 @@ namespace CKAN.ConsoleUI {
                 // If the path is changed, then we have to remove the old instance
                 // and replace it with a new one, whether or not the name is changed.
                 manager.RemoveInstance(oldName);
-                // As in the Add screen, pass ourselves as the IUser so warnings
-                // (e.g. a second instance sharing the external mod folder) show up.
-                manager.AddInstance(path.Value, name.Value, this);
+                // As in the Add screen, pass ourselves as the IUser so the shared
+                // mod folder confirmation shows up. If the user declines it, put
+                // the old instance back instead of losing it entirely.
+                if (manager.AddInstance(path.Value, name.Value, this) == null)
+                {
+                    manager.AddInstance(instance);
+                }
             } else if (name.Value != oldName) {
                 // If only the name changed, there's an API for that.
                 manager.RenameInstance(instance.Name, name.Value);

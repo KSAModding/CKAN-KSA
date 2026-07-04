@@ -6,6 +6,7 @@ using NUnit.Framework;
 
 using CKAN;
 using CKAN.CmdLine;
+using CKAN.Games.KittenSpaceAgency;
 using Tests.Data;
 using Tests.Core.Configuration;
 using System.IO;
@@ -100,6 +101,50 @@ namespace Tests.CmdLine
                                           },
                                           user.RaisedErrors);
             }
+        }
+
+        [Test]
+        public void RunSubCommand_AddSharedModRootDeclined_Fails()
+        {
+            // Arrange: decline the shared-mod-folder confirmation
+            var user = new CapturingUser(false, q => false, (msg, objs) => 0);
+            using (var dirA    = new TemporaryDirectory())
+            using (var dirB    = new TemporaryDirectory())
+            using (var config  = new FakeConfiguration(new List<Tuple<string, string, string>>(),
+                                                       null, null))
+            using (var manager = new GameInstanceManager(user, config))
+            {
+                manager.AddInstance(new CKAN.GameInstance(new KittenSpaceAgency(),
+                                                          FakeKsaGameDir(dirA), "ksaA"));
+                ISubCommand sut     = new GameInstance(manager, user);
+                var         args    = new string[]
+                                      {
+                                          "instance", "add",
+                                          "ksaB", FakeKsaGameDir(dirB),
+                                      };
+                var         subOpts = new SubCommandOptions(args);
+
+                // Act
+                sut.RunSubCommand(null, subOpts);
+
+                // Assert
+                Assert.AreEqual(1, user.RaisedYesNoDialogQuestions.Count);
+                CollectionAssert.DoesNotContain(manager.Instances.Keys, "ksaB");
+                Assert.IsEmpty(user.RaisedMessages,
+                               "InstanceAdded must not be reported on decline");
+            }
+        }
+
+        // A folder that KittenSpaceAgency accepts as a valid game instance:
+        // the KSA.exe anchor plus one Content/Versions build file.
+        private static string FakeKsaGameDir(string dir)
+        {
+            File.WriteAllText(Path.Combine(dir, "KSA.exe"), "");
+            var versionsDir = Path.Combine(dir, "Content", "Versions");
+            Directory.CreateDirectory(versionsDir);
+            File.WriteAllText(Path.Combine(versionsDir, "v2026.6.X.4750.json"),
+                              "{ \"build\": \"2026.6.9.4750\" }");
+            return dir;
         }
 
         [Test]
