@@ -13,6 +13,7 @@ jobs:
         game:
           - Ksp
           - Ksp2
+          - Ksa
     name: Bounce the ${{ matrix.game }} Inflator
     runs-on: ubuntu-latest
     steps:
