@@ -629,6 +629,87 @@ namespace Tests.Core
             }
         }
 
+        [Test]
+        public void AddInstance_PathOverloadSecondSharer_DeclineDoesNotRegister()
+        {
+            // Arrange
+            using (var dirA   = new TemporaryDirectory())
+            using (var dirB   = new TemporaryDirectory())
+            using (var config = new FakeConfiguration(new List<Tuple<string, string, string>>(),
+                                                      null, null))
+            {
+                // Decline the shared-mod-folder confirmation
+                var user = new CapturingUser(false, q => false, (msg, objs) => 0);
+                using (var mgr = new GameInstanceManager(user, config))
+                {
+                    mgr.AddInstance(new GameInstance(new KittenSpaceAgency(), FakeKsaGameDir(dirA), "ksaA"));
+
+                    // Act
+                    var result = mgr.AddInstance(FakeKsaGameDir(dirB), "ksaB", user);
+
+                    // Assert
+                    Assert.IsNull(result);
+                    Assert.IsFalse(mgr.HasInstance("ksaB"));
+                    Assert.AreEqual(1, user.RaisedYesNoDialogQuestions.Count);
+                    Assert.IsEmpty(user.RaisedErrors,
+                                   "Declining should not also raise the warning");
+                }
+            }
+        }
+
+        [Test]
+        public void AddInstance_PathOverloadSecondSharer_ConfirmRegistersWithoutExtraWarning()
+        {
+            // Arrange
+            using (var dirA   = new TemporaryDirectory())
+            using (var dirB   = new TemporaryDirectory())
+            using (var config = new FakeConfiguration(new List<Tuple<string, string, string>>(),
+                                                      null, null))
+            {
+                // Confirm the shared-mod-folder confirmation
+                var user = new CapturingUser(false, q => true, (msg, objs) => 0);
+                using (var mgr = new GameInstanceManager(user, config))
+                {
+                    mgr.AddInstance(new GameInstance(new KittenSpaceAgency(), FakeKsaGameDir(dirA), "ksaA"));
+
+                    // Act
+                    var result = mgr.AddInstance(FakeKsaGameDir(dirB), "ksaB", user);
+
+                    // Assert
+                    Assert.IsNotNull(result);
+                    Assert.IsTrue(mgr.HasInstance("ksaB"));
+                    var question = user.RaisedYesNoDialogQuestions.Single();
+                    StringAssert.StartsWith("\"ksaB\" shares", question);
+                    StringAssert.Contains("Add it anyway?", question);
+                    Assert.IsEmpty(user.RaisedErrors,
+                                   "Confirming should not warn a second time");
+                }
+            }
+        }
+
+        [Test]
+        public void AddInstance_PathOverloadFirstInstance_DoesNotPrompt()
+        {
+            // Arrange
+            using (var dirA   = new TemporaryDirectory())
+            using (var config = new FakeConfiguration(new List<Tuple<string, string, string>>(),
+                                                      null, null))
+            {
+                var user = new CapturingUser(false, q => false, (msg, objs) => 0);
+                using (var mgr = new GameInstanceManager(user, config))
+                {
+                    // Act
+                    var result = mgr.AddInstance(FakeKsaGameDir(dirA), "ksaA", user);
+
+                    // Assert
+                    Assert.IsNotNull(result);
+                    Assert.IsTrue(mgr.HasInstance("ksaA"));
+                    Assert.IsEmpty(user.RaisedYesNoDialogQuestions);
+                    Assert.IsEmpty(user.RaisedErrors);
+                }
+            }
+        }
+
         // A minimal fake game whose mod directory lives outside GameDir (like KSA),
         // valid enough for GameInstanceManager.AddInstance to accept its instances.
         private static Mock<IGame> SharedModRootGame(string externalModRoot)

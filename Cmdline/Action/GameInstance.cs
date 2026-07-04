@@ -298,7 +298,11 @@ namespace CKAN.CmdLine
                 if (user != null)
                 {
                     string path = options.path;
-                    Manager.AddInstance(path, options.name, user);
+                    if (Manager.AddInstance(path, options.name, user) == null)
+                    {
+                        // The user declined, e.g. the shared mod folder confirmation
+                        return Exit.ERROR;
+                    }
                     user.RaiseMessage(Properties.Resources.InstanceAdded, options.name, options.path);
                 }
                 return Exit.OK;
