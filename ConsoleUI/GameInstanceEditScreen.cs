@@ -233,7 +233,8 @@ namespace CKAN.ConsoleUI {
         /// Similar to adding, except we have to remove the old instance,
         /// and there's an API specifically for renaming.
         /// </summary>
-        protected override void Save()
+        /// <returns>true to close the screen, false when re-adding the changed path was declined or cancelled (the old instance is restored and the screen stays open)</returns>
+        protected override bool Save()
         {
             if (stabilityToleranceButtons?.Selection != null)
             {
@@ -255,16 +256,20 @@ namespace CKAN.ConsoleUI {
                 // and replace it with a new one, whether or not the name is changed.
                 manager.RemoveInstance(oldName);
                 // As in the Add screen, pass ourselves as the IUser so the shared
-                // mod folder confirmation shows up. If the user declines it, put
-                // the old instance back instead of losing it entirely.
+                // mod folder confirmation shows up. If the user declines it (or
+                // cancels the game selection), put the old instance back instead
+                // of losing it entirely, and keep the screen open so the edit is
+                // not silently dropped as if it had been saved.
                 if (manager.AddInstance(path.Value, name.Value, this) == null)
                 {
                     manager.AddInstance(instance);
+                    return false;
                 }
             } else if (name.Value != oldName) {
                 // If only the name changed, there's an API for that.
                 manager.RenameInstance(instance.Name, name.Value);
             }
+            return true;
         }
 
         private readonly GameInstance     instance;

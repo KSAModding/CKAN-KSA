@@ -24,12 +24,13 @@ namespace CKAN.ConsoleUI {
             AddTip("F2", Properties.Resources.Accept);
             AddBinding(Keys.F2, sender =>
             {
-                if (Valid()) {
-                    Save();
+                if (Valid() && Save()) {
                     // Close screen
                     return false;
                 } else {
-                    // Keep running the screen
+                    // Keep running the screen, either because the fields are
+                    // invalid or because the user declined a confirmation
+                    // inside Save (e.g. the shared mod folder prompt)
                     return true;
                 }
             });
@@ -70,7 +71,8 @@ namespace CKAN.ConsoleUI {
         /// Save the fields.
         /// Abstract because the details depend on whether we're adding or editing.
         /// </summary>
-        protected abstract void Save();
+        /// <returns>true to close the screen, false to keep it open (the user declined a confirmation or cancelled a dialog and the fields were not saved)</returns>
+        protected abstract bool Save();
 
         /// <summary>
         /// Return whether the name field is non-empty and unique
