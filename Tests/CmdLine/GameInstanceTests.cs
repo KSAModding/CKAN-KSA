@@ -7,6 +7,7 @@ using NUnit.Framework;
 using CKAN;
 using CKAN.CmdLine;
 using CKAN.Games.KittenSpaceAgency;
+using CKAN.Versioning;
 using Tests.Data;
 using Tests.Core.Configuration;
 using System.IO;
@@ -499,6 +500,111 @@ namespace Tests.CmdLine
                 // Assert
                 Assert.Contains("fakeInstance", manager.Instances.Keys.ToArray());
                 Assert.AreEqual("fakeInstance", config.AutoStartInstance);
+            }
+        }
+
+        // The raw in-game version string (non-zero build counter) must work end to
+        // end through the CmdLine path: it is normalized before the version
+        // selection dialog, so it resolves without prompting and the instance is
+        // registered with the normalized version.
+        [Test]
+        public void RunSubCommand_FakeKsaRawVersion_Works()
+        {
+            // Arrange
+            var user = new CapturingUser(false, q => true, (msg, objs) => 0);
+            using (var inst    = new DisposableKSP())
+            using (var fakeDir = new TemporaryDirectory())
+            using (var config  = new FakeConfiguration(inst.KSP, inst.KSP.Name))
+            using (var manager = new GameInstanceManager(user, config))
+            {
+                ISubCommand sut     = new GameInstance(manager, user);
+                var         args    = new string[]
+                                      {
+                                          "instance", "fake",
+                                          "fakeKsa", fakeDir, "2026.6.9.4750",
+                                          "--game", "KSA",
+                                      };
+                var         subOpts = new SubCommandOptions(args);
+
+                // Act
+                sut.RunSubCommand(null, subOpts);
+
+                // Assert
+                Assert.IsEmpty(user.RaisedErrors);
+                Assert.Contains("fakeKsa", manager.Instances.Keys.ToArray());
+                Assert.AreEqual(GameVersion.Parse("2026.6.0.4750"),
+                                manager.Instances["fakeKsa"].Version());
+            }
+        }
+
+        // An unknown revision must fail outright rather than being silently
+        // replaced with a different known revision of the same month.
+        [Test]
+        public void RunSubCommand_FakeKsaUnknownRevision_Fails()
+        {
+            // Arrange
+            var user = new CapturingUser(false, q => true, (msg, objs) => 0);
+            using (var inst    = new DisposableKSP())
+            using (var fakeDir = new TemporaryDirectory())
+            using (var config  = new FakeConfiguration(inst.KSP, inst.KSP.Name))
+            using (var manager = new GameInstanceManager(user, config))
+            {
+                ISubCommand sut     = new GameInstance(manager, user);
+                var         args    = new string[]
+                                      {
+                                          "instance", "fake",
+                                          "fakeKsa", fakeDir, "2026.6.9.999999",
+                                          "--game", "KSA",
+                                      };
+                var         subOpts = new SubCommandOptions(args);
+
+                // Act
+                sut.RunSubCommand(null, subOpts);
+
+                // Assert
+                // The bad-version message is multi-line, so match its start rather
+                // than pinning the exact line separator
+                Assert.AreEqual(2, user.RaisedErrors.Count);
+                StringAssert.StartsWith("Couldn't find a valid game version for your input.",
+                                        user.RaisedErrors.First());
+                Assert.AreEqual("--Error: bad argument(s)--", user.RaisedErrors.Last());
+                Assert.IsFalse(manager.Instances.ContainsKey("fakeKsa"));
+            }
+        }
+
+        // The KSP DLC options must not create bogus KSP DLC folders inside a
+        // faked instance of another game.
+        [Test]
+        public void RunSubCommand_FakeKsaWithDlcs_Fails()
+        {
+            // Arrange
+            var user = new CapturingUser(false, q => true, (msg, objs) => 0);
+            using (var inst    = new DisposableKSP())
+            using (var fakeDir = new TemporaryDirectory())
+            using (var config  = new FakeConfiguration(inst.KSP, inst.KSP.Name))
+            using (var manager = new GameInstanceManager(user, config))
+            {
+                ISubCommand sut     = new GameInstance(manager, user);
+                var         args    = new string[]
+                                      {
+                                          "instance", "fake",
+                                          "fakeKsa", fakeDir, "2026.6.9.4750",
+                                          "--game", "KSA",
+                                          "--MakingHistory", "1.0.0",
+                                      };
+                var         subOpts = new SubCommandOptions(args);
+
+                // Act
+                sut.RunSubCommand(null, subOpts);
+
+                // Assert
+                CollectionAssert.AreEqual(new string[]
+                                          {
+                                              "The --MakingHistory and --BreakingGround options are only valid for KSP",
+                                              "--Error: bad argument(s)--",
+                                          },
+                                          user.RaisedErrors);
+                Assert.IsFalse(manager.Instances.ContainsKey("fakeKsa"));
             }
         }
 
