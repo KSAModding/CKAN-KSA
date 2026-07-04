@@ -9,7 +9,9 @@ using log4net;
 
 using CKAN.Versioning;
 using CKAN.Games;
+using CKAN.Games.KerbalSpaceProgram;
 using CKAN.Games.KerbalSpaceProgram.DLC;
+using CKAN.Games.KittenSpaceAgency;
 
 namespace CKAN.CmdLine
 {
@@ -553,6 +555,14 @@ namespace CKAN.CmdLine
                 }
             }
 
+            // Making History and Breaking Ground exist only for KSP; reject them for
+            // other games instead of creating bogus KSP DLC folders inside the fake.
+            if (dlcs.Count > 0 && game is not KerbalSpaceProgram)
+            {
+                user.RaiseError(Properties.Resources.InstanceFakeDlcsWithoutKsp);
+                return badArgument();
+            }
+
             // Parse the choosen game version
             try
             {
@@ -563,6 +573,24 @@ namespace CKAN.CmdLine
                 // Thrown if there is anything besides numbers and points in the version string or a different syntactic error.
                 user.RaiseError(Properties.Resources.InstanceFakeVersion);
                 return badArgument();
+            }
+
+            // KSA's build counter (the 3rd version component) is pinned to 0 on every
+            // version CKAN stores, and the selection dialog below matches that component
+            // exactly against the known versions, so normalize a raw in-game version
+            // string (e.g. 2026.6.9.4750) the same way before resolving it.
+            if (game is KittenSpaceAgency)
+            {
+                version = KittenSpaceAgency.NormalizeBuildCounter(version);
+                // For KSA the 4th component (the revision) is the real game version,
+                // so the selection dialog's fallback of offering other builds of the
+                // same year.month would silently substitute a materially different
+                // game version; reject an unknown fully defined version instead.
+                if (version.IsBuildDefined && !version.InBuildMap(game))
+                {
+                    user.RaiseError(Properties.Resources.InstanceFakeBadGameVersion);
+                    return badArgument();
+                }
             }
 
             // Get the full version including build number.

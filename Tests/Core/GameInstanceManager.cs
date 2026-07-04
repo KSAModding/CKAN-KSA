@@ -325,6 +325,61 @@ namespace Tests.Core
             }
         }
 
+        // The raw in-game string (with the real build counter) and the normalized
+        // form CKAN stores must both produce a valid instance registered with the
+        // normalized version. Like the 1.7.1.2539 KSP case above, the version must
+        // be in the game's build map: 2026.6.9.4750 is in the embedded map, and the
+        // remote map (which may be cached on the machine) is append-only, so it
+        // stays known wherever the tests run.
+        [TestCase("2026.6.9.4750"),
+         TestCase("2026.6.0.4750")]
+        public void FakeInstance_Ksa_RegistersValidInstanceWithNormalizedVersion(string versionString)
+        {
+            // Arrange
+            var name    = "testname";
+            var version = GameVersion.Parse(versionString);
+
+            using (var tempdir = new TemporaryDirectory())
+            {
+                // Act
+                var newKsa = manager!.FakeInstance(new KittenSpaceAgency(), name,
+                                                   tempdir, version);
+
+                // Assert
+                Assert.IsTrue(manager?.HasInstance(name));
+                Assert.IsTrue(newKsa.Valid);
+                Assert.AreEqual(GameVersion.Parse("2026.6.0.4750"), newKsa.Version(),
+                                "A fake KSA instance must detect the normalized version");
+                // The version file the game-version provider reads, named like the
+                // real game's v<year>.<month>.X.<revision>.json files
+                FileAssert.Exists(Path.Combine(tempdir, "Content", "Versions",
+                                               "v2026.6.X.4750.json"));
+                DirectoryAssert.DoesNotExist(Path.Combine(tempdir, "mods"));
+            }
+        }
+
+        // An unknown year.month, and an unknown revision within a known month: the
+        // revision (4th component) is KSA's real version ordinal, so it must be
+        // validated too, raw or normalized.
+        [TestCase("2199.1.0.999999"),
+         TestCase("2026.6.0.999999"),
+         TestCase("2026.6.9.999999")]
+        public void FakeInstance_KsaUnknownVersion_ThrowsBadGameVersionKraken(string versionString)
+        {
+            // Arrange
+            var name = "testname";
+            var version = GameVersion.Parse(versionString);
+
+            using (var tempdir = new TemporaryDirectory())
+            {
+                // Act / Assert
+                Assert.Throws<BadGameVersionKraken>(() =>
+                    manager?.FakeInstance(new KittenSpaceAgency(), name,
+                                          tempdir, version));
+                Assert.IsFalse(manager?.HasInstance(name));
+            }
+        }
+
         // GetPreferredInstance
 
         [Test]

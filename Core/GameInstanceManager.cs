@@ -15,6 +15,7 @@ using CKAN.Configuration;
 using CKAN.Games;
 using CKAN.Games.KerbalSpaceProgram;
 using CKAN.Games.KerbalSpaceProgram.GameVersionProviders;
+using CKAN.Games.KittenSpaceAgency;
 using CKAN.DLC;
 
 namespace CKAN
@@ -359,7 +360,23 @@ namespace CKAN
                     throw new InstanceNameTakenKraken(newName);
                 }
 
-                if (!version.WithoutBuild.InBuildMap(game))
+                // KSA's build counter (the 3rd version component) is pinned to 0 on
+                // every version CKAN stores (see KittenSpaceAgency.NormalizeBuildCounter),
+                // so normalize the requested version the same way before the build-map
+                // check below, which compares that component exactly. This lets callers
+                // pass the raw in-game version string (e.g. 2026.6.9.4750).
+                if (game is KittenSpaceAgency)
+                {
+                    version = KittenSpaceAgency.NormalizeBuildCounter(version);
+                }
+
+                // For KSA the 4th component (the revision) is the real game version
+                // ordinal, so it must itself match a known version; checking
+                // WithoutBuild would degenerate the gate to year.month and accept
+                // revisions that never shipped. For the other games the 4th
+                // component is build metadata and stays out of the check.
+                if (!(game is KittenSpaceAgency ? version.InBuildMap(game)
+                                                : version.WithoutBuild.InBuildMap(game)))
                 {
                     throw new BadGameVersionKraken(string.Format(
                         Properties.Resources.GameInstanceFakeBadVersion, game.ShortName, version));
@@ -396,6 +413,21 @@ namespace CKAN
                         txFileMgr.WriteAllBytes(Path.Combine(newPath, b),
                                                 Encoding.UTF8.GetBytes(string.Format("build id = {0}", version.Build)));
                     }
+                }
+
+                // A fake KSA instance needs a Content/Versions build file, because that
+                // is the only on-disk version source KsaBuildVersionProvider reads (KSP2
+                // falls back to its known-versions list, KSA does not), and an instance
+                // without a detectable version is rejected by AddInstance as invalid.
+                // The file carries the normalized version (build counter pinned to 0),
+                // which is what DetectVersion would reduce a raw value to anyway.
+                if (game is KittenSpaceAgency)
+                {
+                    var versionsDir = Path.Combine(newPath, KsaBuildVersionProvider.versionsDirRelative);
+                    txFileMgr.CreateDirectory(versionsDir);
+                    txFileMgr.WriteAllBytes(
+                        Path.Combine(versionsDir, KsaBuildVersionProvider.VersionFileName(version)),
+                        Encoding.UTF8.GetBytes(KsaBuildVersionProvider.VersionFileContents(version)));
                 }
 
                 // Create the readme.txt WITHOUT build number
