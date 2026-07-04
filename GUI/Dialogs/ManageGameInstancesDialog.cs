@@ -172,8 +172,13 @@ namespace CKAN.GUI
                         instanceName = path;
                     }
                     instanceName = manager.GetNextValidInstanceName(instanceName);
-                    manager.AddInstance(path, instanceName, user);
-                    UpdateInstancesList();
+                    // null means the user declined the shared mod folder
+                    // confirmation or cancelled the game selection dialog:
+                    // nothing was registered, so change nothing here
+                    if (manager.AddInstance(path, instanceName, user) != null)
+                    {
+                        UpdateInstancesList();
+                    }
                 }
             }
             catch (NotGameDirKraken k)
