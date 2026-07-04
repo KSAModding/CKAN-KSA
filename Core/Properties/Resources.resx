@@ -205,6 +205,7 @@ Update CKAN to load this game instance.</value></data>
 {2} stores mods once per user rather than per game folder, so installing, removing, upgrading, or launching from any of these instances also affects the others and can disable or remove their mods.
 Manage mods through only one of these instances.
 See https://github.com/KSAModding/CKAN-KSA/issues/19 for details.</value></data>
+  <data name="GameInstanceManagerSharedModRootPrompt" xml:space="preserve"><value>Add it anyway?</value></data>
   <data name="GameInstanceManagerCacheMigrationPrompt" xml:space="preserve"><value>Old cache folder contains {0}. New cache folder has {1} free.
 What would you like to do?</value></data>
   <data name="GameInstanceManagerCacheMigrationPromptFreeSpaceUnknown" xml:space="preserve"><value>Old cache folder contains {0}. New cache folder has unknown free space.
