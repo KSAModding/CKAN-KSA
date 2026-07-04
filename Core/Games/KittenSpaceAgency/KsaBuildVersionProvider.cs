@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
@@ -30,12 +31,39 @@ namespace CKAN.Games.KittenSpaceAgency
 
         public bool TryGetVersion(string directory, [NotNullWhen(true)] out GameVersion? result)
         {
-            result = null;
+            var root = new DirectoryInfo(directory);
 
-            var versionStr = GetLatestBuildValue(new DirectoryInfo(directory));
-            if (versionStr == null) return false;
+            if (GameVersion.TryParse(GetDllFileVersion(root), out result)
+                && result.IsBuildDefined)
+            {
+                return true;
+            }
+            return GameVersion.TryParse(GetLatestBuildValue(root), out result);
+        }
 
-            return GameVersion.TryParse(versionStr, out result);
+        // The full 4-part version (e.g. 2026.6.9.4750) stamped into KSA.dll's PE
+        // file version resource at build time, or null when the file is missing
+        // or carries no version. Preferred over the build info files because it
+        // identifies the binary that is actually installed instead of whichever
+        // file in Content/Versions happens to have the newest timestamp.
+        // FileVersion rather than ProductVersion, because the latter is the
+        // informational version, which can carry a +<commit sha> suffix that
+        // GameVersion cannot parse.
+        // Faked instances (GameInstanceManager.FakeInstance) have no KSA.dll and
+        // are versioned through the build info fallback below.
+        private static string? GetDllFileVersion(DirectoryInfo root)
+        {
+            var dllPath = Path.Combine(root.FullName, "KSA.dll");
+            try
+            {
+                return File.Exists(dllPath)
+                    ? FileVersionInfo.GetVersionInfo(dllPath).FileVersion
+                    : null;
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         private static string? GetLatestBuildValue(DirectoryInfo root)
