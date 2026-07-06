@@ -317,7 +317,19 @@ namespace CKAN.Games.KittenSpaceAgency
 
         public Uri ModSupportURL => new Uri("https://forums.ahwoo.com/forums/guides-and-help.19");
 
+        // Binds the real user-profile paths, which tests must not touch; the
+        // internal overload below carries the logic and is covered.
+        [ExcludeFromCodeCoverage]
         public void ProcessLoadedModsBeforeGameStart(IReadOnlyCollection<InstalledModule> installedModules)
+            => ProcessLoadedModsBeforeGameStart(installedModules,
+                                                manifestPath,
+                                                manifestManagedModsPath);
+
+        // manifestFile/managedModsFile are separate args so tests can point them
+        // at temp files instead of the real Documents folder and app data.
+        internal void ProcessLoadedModsBeforeGameStart(IReadOnlyCollection<InstalledModule> installedModules,
+                                                       string manifestFile,
+                                                       string managedModsFile)
         {
             log.Info("Loaded KSA mods:");
             foreach (var installedModule in installedModules)
@@ -331,7 +343,7 @@ namespace CKAN.Games.KittenSpaceAgency
                 // names from the installed files rather than assuming identifier == folder.
                 var modFolders = ModFolderNames(installedModules.SelectMany(im => im.Files),
                                                 PrimaryModDirectoryRelative);
-                UpdateManifestFile(modFolders, manifestPath, manifestManagedModsPath);
+                UpdateManifestFile(modFolders, manifestFile, managedModsFile);
             }
             catch (Exception e)
             {

@@ -145,6 +145,38 @@ namespace Tests.Core.Games
             Assert.IsNull(version);
         }
 
+        [Test]
+        public void TryGetVersion_EmptyVersionsDir_ReturnsFalse()
+        {
+            // Arrange: the folder exists but holds no build info files
+            Directory.CreateDirectory(Path.Combine(tempDir, "Content", "Versions"));
+
+            // Act
+            var found = new KsaBuildVersionProvider().TryGetVersion(tempDir, out var version);
+
+            // Assert
+            Assert.IsFalse(found);
+            Assert.IsNull(version);
+        }
+
+        [Test]
+        public void TryGetVersion_CorruptVersionsFile_ReturnsFalse()
+        {
+            // Arrange: a build info file that is not valid JSON must not crash
+            // version detection, just yield no version
+            var versionsDir = Path.Combine(tempDir, "Content", "Versions");
+            Directory.CreateDirectory(versionsDir);
+            File.WriteAllText(Path.Combine(versionsDir, "v2026.6.X.4750.json"),
+                              "{ not valid json");
+
+            // Act
+            var found = new KsaBuildVersionProvider().TryGetVersion(tempDir, out var version);
+
+            // Assert
+            Assert.IsFalse(found);
+            Assert.IsNull(version);
+        }
+
         // Stand in for a real KSA.dll with a managed assembly from the test bin
         // directory, since the provider only reads the PE file version resource.
         // fullFourPart selects an assembly stamped with a full 4-part version

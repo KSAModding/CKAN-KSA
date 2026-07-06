@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -11,6 +12,7 @@ using CKAN.IO;
 using CKAN.Versioning;
 using CKAN.Games.KittenSpaceAgency;
 using CKAN.Games.KerbalSpaceProgram;
+using CKAN.Games.KerbalSpaceProgram2;
 using ManifestModEntry = CKAN.Games.KittenSpaceAgency.KittenSpaceAgency.ManifestModEntry;
 
 namespace Tests.Core.Games
@@ -449,6 +451,8 @@ namespace Tests.Core.Games
             // The wildcard rendering is KSA-specific; other games show the plain string.
             Assert.AreEqual("1.12",
                             new KerbalSpaceProgram().FormatVersion(GameVersion.Parse("1.12")));
+            Assert.AreEqual("0.2",
+                            new KerbalSpaceProgram2().FormatVersion(GameVersion.Parse("0.2")));
         }
 
         [Test]
@@ -728,6 +732,262 @@ namespace Tests.Core.Games
                              currentIdentifiers: new HashSet<string> { "mymod" });
 
             Assert.AreEqual(Platform.IsWindows ? 1 : 2, result.Count);
+        }
+
+        [Test]
+        public void GameSurface_StaticProperties_MatchGameConventions()
+        {
+            var game = new KittenSpaceAgency();
+
+            Assert.AreEqual(new DateTime(2025, 11, 14), game.FirstReleaseDate);
+            CollectionAssert.IsEmpty(game.AlternateModDirectoriesRelative);
+            // The stock content the game ships with, which CKAN must not manage.
+            CollectionAssert.Contains(game.StockFolders, "Content");
+            CollectionAssert.Contains(game.StockFolders, "Content/Core");
+            CollectionAssert.IsEmpty(game.LeaveEmptyInClones);
+            CollectionAssert.IsEmpty(game.ReservedPaths);
+            CollectionAssert.IsEmpty(game.CreateableInstallTos);
+            // The installer may create the per-mod folders under the mod root.
+            CollectionAssert.AreEqual(new[] { "mods" }, game.CreateableDirs);
+            CollectionAssert.IsEmpty(game.AutoRemovableDirs);
+            // KSA has no paid DLC and no named install filter presets.
+            CollectionAssert.IsEmpty(game.DlcDetectors);
+            CollectionAssert.IsEmpty(game.InstallFilterPresets);
+            Assert.DoesNotThrow(() => game.RebuildSubdirectories(tempDir));
+        }
+
+        [Test]
+        public void AllowInstallationIn_NamedTargets_NoneBesidesImplicitModRoot()
+        {
+            // The mod root is allowed implicitly via PrimaryModDirectoryRelative;
+            // KSA defines no other named install_to targets.
+            Assert.IsFalse(new KittenSpaceAgency().AllowInstallationIn("GameData", out _));
+            Assert.IsFalse(new KittenSpaceAgency().AllowInstallationIn("BepInEx/plugins", out _));
+        }
+
+        [Test]
+        public void MetadataAndCommunityUrls_PointAtKsaResources()
+        {
+            var game = new KittenSpaceAgency();
+
+            // Assert the repo names, not the owning org, so these hold across a
+            // transfer of the metadata repos to another org.
+            StringAssert.Contains("KSA-CKAN-meta", game.DefaultRepositoryURL.ToString());
+            StringAssert.Contains("repositories.json", game.RepositoryListURL.ToString());
+            StringAssert.Contains("KSA-NetKAN", game.MetadataBugtrackerURL.ToString());
+            Assert.IsNotNull(game.DiscordURL);
+            Assert.IsNotNull(game.ModSupportURL);
+        }
+
+        [Test]
+        public void IsReservedDirectory_GameCkanAndModRoot_True()
+        {
+            var inst = MakeInstance();
+            var game = inst.Game;
+
+            Assert.IsTrue(game.IsReservedDirectory(inst, inst.GameDir));
+            Assert.IsTrue(game.IsReservedDirectory(inst, inst.CkanDir));
+            Assert.IsTrue(game.IsReservedDirectory(inst, game.PrimaryModDirectory(inst)));
+            Assert.IsFalse(game.IsReservedDirectory(
+                inst, CKANPathUtils.NormalizePath(Path.Combine(inst.GameDir, "Content"))));
+        }
+
+        [Test]
+        public void DefaultCommandLines_AnchorPresent_LaunchesAnchorExe()
+        {
+            var gameDir = new DirectoryInfo(tempDir);
+            File.WriteAllText(Path.Combine(tempDir, "KSA.exe"), "");
+
+            var lines = new KittenSpaceAgency().DefaultCommandLines(new SteamLibrary(null),
+                                                                    gameDir);
+
+            // No Steam library, so the only launch line is the game exe itself.
+            Assert.AreEqual(1, lines.Length);
+            if (Platform.IsMac)
+            {
+                StringAssert.Contains("KSA.app", lines[0]);
+            }
+            else
+            {
+                StringAssert.Contains("KSA.exe", lines[0]);
+                StringAssert.EndsWith("-single-instance", lines[0]);
+            }
+        }
+
+        [Test]
+        public void DefaultCommandLines_AnchorMissing_FallsBackToDefaultName()
+        {
+            // An unusual install without the anchor file still gets a launch line
+            // built from the default anchor name.
+            var lines = new KittenSpaceAgency().DefaultCommandLines(new SteamLibrary(null),
+                                                                    new DirectoryInfo(tempDir));
+
+            Assert.AreEqual(1, lines.Length);
+            if (!Platform.IsMac)
+            {
+                StringAssert.Contains("KSA.exe", lines[0]);
+            }
+        }
+
+        [Test]
+        public void AdjustCommandLine_InstanceOverload_NonAnchorArgs_Unchanged()
+        {
+            // The GameInstance overload resolves the user's real mod root; with a
+            // launch line that does not start with KSA.exe nothing is swapped and
+            // nothing may be written.
+            var inst = MakeInstance();
+            var args = new[] { "steam://rungameid/12345" };
+
+            CollectionAssert.AreEqual(args, inst.Game.AdjustCommandLine(args, null, inst));
+        }
+
+        [Test]
+        public void AdjustCommandLine_ConfigPathBlocked_FallsBackToPlainLaunch()
+        {
+            // A directory squatting on the StarMapConfig.json path makes the config
+            // write throw. AdjustCommandLine runs before PlayGame's own error
+            // handling, so it must swallow that and launch KSA.exe unchanged.
+            WriteFakeStarMapExe();
+            Directory.CreateDirectory(Path.Combine(tempDir, StarMapTestFolder, "StarMapConfig.json"));
+            var args = new[] { "KSA.exe", "-single-instance" };
+
+            string[] adjusted = Array.Empty<string>();
+            Assert.DoesNotThrow(() =>
+                adjusted = new KittenSpaceAgency().AdjustCommandLine(args, tempDir, fakeGameDir));
+
+            CollectionAssert.AreEqual(args, adjusted);
+        }
+
+        [Test]
+        public void ParseValue_ControlCharacterEscapes_Decoded()
+        {
+            Assert.AreEqual("a\tb", KittenSpaceAgency.ParseValue("\"a\\tb\""));
+            Assert.AreEqual("a\nb", KittenSpaceAgency.ParseValue("\"a\\nb\""));
+            Assert.AreEqual("a\rb", KittenSpaceAgency.ParseValue("\"a\\rb\""));
+            Assert.AreEqual("a\bb", KittenSpaceAgency.ParseValue("\"a\\bb\""));
+            Assert.AreEqual("a\fb", KittenSpaceAgency.ParseValue("\"a\\fb\""));
+        }
+
+        [Test]
+        public void ParseValue_InvalidUnicodeEscape_KeptLiterally()
+        {
+            // \u not followed by four hex digits: the u is kept and parsing
+            // continues, instead of corrupting or truncating the value.
+            Assert.AreEqual("auZZZZb", KittenSpaceAgency.ParseValue("\"a\\uZZZZb\""));
+        }
+
+        [Test]
+        public void ParseValue_UnknownEscape_KeepsFollowingCharacter()
+        {
+            Assert.AreEqual("aqb", KittenSpaceAgency.ParseValue("\"a\\qb\""));
+        }
+
+        [Test]
+        public void SerializeManifest_ParseManifest_ControlCharactersRoundTrip()
+        {
+            // Control characters in an id must be escaped on write (a raw newline
+            // would break the line-based format) and decoded on read.
+            var original = new List<ManifestModEntry>
+            {
+                new ManifestModEntry { Id = "tab\there\nnewline\rreturn\bbell\ffeed",
+                                       Enabled = true },
+            };
+
+            var reparsed = KittenSpaceAgency.ParseManifest(
+                               KittenSpaceAgency.SerializeManifest(original));
+
+            Assert.AreEqual(original[0].Id, reparsed.Single().Id);
+        }
+
+        [Test]
+        public void SerializeManifest_ExtraLines_WrittenBack()
+        {
+            // Unknown keys parsed from the game's manifest must survive a rewrite.
+            var entries = KittenSpaceAgency.ParseManifest(
+                "[[mods]]\nid = \"Core\"\nenabled = true\nversion = \"1.0\"\n");
+
+            var written = KittenSpaceAgency.SerializeManifest(entries);
+
+            StringAssert.Contains("version = \"1.0\"", written);
+        }
+
+        [Test]
+        public void UpdateManifestFile_UnwritableManifestPath_DoesNotThrow()
+        {
+            // A file squatting on the manifest's parent folder path makes the
+            // directory creation fail; the sync is best-effort and must swallow it.
+            var blocker = Path.Combine(tempDir, "blocked");
+            File.WriteAllText(blocker, "");
+
+            Assert.DoesNotThrow(() =>
+                KittenSpaceAgency.UpdateManifestFile(
+                    new HashSet<string> { "SomeMod" },
+                    Path.Combine(blocker, "manifest.toml"),
+                    Path.Combine(tempDir, "managed-mods.json")));
+        }
+
+        [Test]
+        public void ProcessLoadedModsBeforeGameStart_InstalledModule_WritesManifest()
+        {
+            // The end-to-end path from installed modules to the manifest: the mod
+            // folder name is derived from the installed files and enabled.
+            var inst   = MakeInstance();
+            var module = CkanModule.FromJson(
+                @"{
+                    ""spec_version"": 1,
+                    ""identifier"":   ""TestMod"",
+                    ""name"":         ""TestMod"",
+                    ""abstract"":     ""A test module"",
+                    ""author"":       ""tester"",
+                    ""license"":      ""MIT"",
+                    ""version"":      ""1.0"",
+                    ""download"":     ""https://example.com/TestMod.zip""
+                }");
+            var installed = new InstalledModule(inst, module,
+                                                new[] { "mods/TestMod/mod.toml",
+                                                        "mods/TestMod/TestMod.dll" },
+                                                false);
+            var manifestFile    = Path.Combine(tempDir, "manifest.toml");
+            var managedModsFile = Path.Combine(tempDir, "managed-mods.json");
+
+            new KittenSpaceAgency().ProcessLoadedModsBeforeGameStart(
+                new[] { installed }, manifestFile, managedModsFile);
+
+            var entries = KittenSpaceAgency.ParseManifest(File.ReadAllText(manifestFile));
+            Assert.IsTrue(entries.Single(e => e.Id == "TestMod").Enabled);
+        }
+
+        [Test]
+        public void ProcessLoadedModsBeforeGameStart_EnumerationThrows_DoesNotThrow()
+        {
+            // Keeping the manifest in sync is a best-effort side effect of an
+            // otherwise successful operation, so a failure while deriving the mod
+            // folders must never surface to the caller.
+            var manifestFile = Path.Combine(tempDir, "manifest.toml");
+
+            Assert.DoesNotThrow(() =>
+                new KittenSpaceAgency().ProcessLoadedModsBeforeGameStart(
+                    new ThrowsOnSecondEnumeration(),
+                    manifestFile,
+                    Path.Combine(tempDir, "managed-mods.json")));
+
+            Assert.IsFalse(File.Exists(manifestFile));
+        }
+
+        // Enumerates fine once (the logging loop) and throws on the second pass
+        // (deriving the mod folders), simulating a failure mid-sync.
+        private sealed class ThrowsOnSecondEnumeration : IReadOnlyCollection<InstalledModule>
+        {
+            private int enumerations = 0;
+
+            public int Count => 0;
+
+            public IEnumerator<InstalledModule> GetEnumerator()
+                => ++enumerations > 1
+                    ? throw new IOException("simulated failure")
+                    : Enumerable.Empty<InstalledModule>().GetEnumerator();
+
+            IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
         }
     }
 }

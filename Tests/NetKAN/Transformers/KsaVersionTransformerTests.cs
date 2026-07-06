@@ -78,5 +78,22 @@ namespace Tests.NetKAN.Transformers
 
             Assert.AreEqual("2026.6", (string?)json["ksp_version"]);
         }
+
+        [Test]
+        public void Transform_NormalizedResult_YieldsExactlyOneMetadata()
+        {
+            // The transformer replaces the metadata rather than appending to it,
+            // so fully enumerating the result must produce exactly one document.
+            var sut      = new KsaVersionTransformer(new KittenSpaceAgency());
+            var metadata = new Metadata(new JObject()
+            {
+                { "ksp_version", "2026.6.9.4750" },
+            });
+
+            var results = sut.Transform(metadata, opts).ToArray();
+
+            Assert.AreEqual(1, results.Length);
+            Assert.AreEqual("2026.6.0.4750", (string?)results[0].Json()["ksp_version"]);
+        }
     }
 }

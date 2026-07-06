@@ -117,6 +117,24 @@ namespace Tests.Core.IO
         }
 
         /// <summary>
+        /// Make sure a relative directory resolves through the instance (which
+        /// maps external mod roots for games like KSA), not against the process
+        /// working directory.
+        /// </summary>
+        [Test]
+        public void TestRelativePathResolvesAgainstInstance()
+        {
+            var result = _installer?.AddParentDirectories(new HashSet<string>()
+            {
+                Path.Combine("GameData", _testModule!.identifier)
+            }).ToList()!;
+
+            Assert.Contains(CKANPathUtils.NormalizePath(
+                                Path.Combine(_gameDataDir!, _testModule!.identifier)),
+                            result);
+        }
+
+        /// <summary>
         /// Make sure that the list of directories is
         /// always normalized and deduplicated.
         /// </summary>
