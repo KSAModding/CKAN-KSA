@@ -765,6 +765,116 @@ namespace Tests.Core
             }
         }
 
+        [Test]
+        public void AddInstance_PathOverloadStateDirNotCreatable_RaisesErrorAndDoesNotRegister()
+        {
+            // Arrange
+            using (var dirA   = new TemporaryDirectory())
+            using (var config = new FakeConfiguration(new List<Tuple<string, string, string>>(),
+                                                      null, null))
+            {
+                var user = new CapturingUser(false, q => true, (msg, objs) => 0);
+                using (var mgr = new GameInstanceManager(user, config))
+                {
+                    var gameDir = FakeKsaGameDir(dirA);
+                    // A file squatting on the CKAN state folder path makes setting
+                    // it up fail with an IOException (KSAModding/CKAN-KSA#46), which
+                    // must surface the generic message naming the underlying cause,
+                    // not the access-denied relocation guidance.
+                    File.WriteAllText(Path.Combine(gameDir, "CKAN"), "");
+
+                    // Act
+                    var result = mgr.AddInstance(gameDir, "ksaA", user);
+
+                    // Assert: nothing registered, one actionable error, no raw crash
+                    Assert.IsNull(result);
+                    Assert.IsFalse(mgr.HasInstance("ksaA"));
+                    var error = user.RaisedErrors.Single();
+                    StringAssert.StartsWith("CKAN could not set up its data folder", error);
+                    StringAssert.Contains("Fix the reported problem", error);
+                    // {0} is the resolved absolute state folder path
+                    StringAssert.Contains(Path.Combine(Path.GetFullPath(gameDir), "CKAN")
+                                              .Replace('\\', '/'),
+                                          error.Replace('\\', '/'));
+                    Assert.IsEmpty(user.RaisedYesNoDialogQuestions);
+                }
+            }
+        }
+
+        [Test]
+        public void AddInstance_PathOverloadStateDirAccessDenied_RaisesWritabilityGuidance()
+        {
+            // Arrange
+            using (var dirA   = new TemporaryDirectory())
+            using (var config = new FakeConfiguration(new List<Tuple<string, string, string>>(),
+                                                      null, null))
+            {
+                var user = new CapturingUser(false, q => true, (msg, objs) => 0);
+                using (var mgr = new GameInstanceManager(user, config))
+                {
+                    var gameDir = FakeKsaGameDir(dirA);
+                    // A directory squatting on the playtime.json path makes the
+                    // constructor's File.ReadAllText throw UnauthorizedAccessException
+                    // on every platform, pinning the access-denied branch (the actual
+                    // Program Files scenario of KSAModding/CKAN-KSA#46) without ACL
+                    // juggling.
+                    Directory.CreateDirectory(Path.Combine(gameDir, "CKAN", "playtime.json"));
+
+                    // Act
+                    var result = mgr.AddInstance(gameDir, "ksaA", user);
+
+                    // Assert: nothing registered, the full relocation guidance shown
+                    Assert.IsNull(result);
+                    Assert.IsFalse(mgr.HasInstance("ksaA"));
+                    var error = user.RaisedErrors.Single();
+                    StringAssert.StartsWith("CKAN could not create its data folder", error);
+                    StringAssert.Contains("write access", error);
+                    // Pin the placeholder mapping: {2} is the suggested folder
+                    StringAssert.Contains(Path.Combine("Games", new DirectoryInfo(gameDir).Name)
+                                              .Replace('\\', '/'),
+                                          error.Replace('\\', '/'));
+                    Assert.IsEmpty(user.RaisedYesNoDialogQuestions);
+                }
+            }
+        }
+
+        [Test]
+        public void AddInstance_PathOverloadStateDirNotCreatable_KeepsExistingInstances()
+        {
+            // Arrange: pins the manager-level contract the ConsoleUI edit screen's
+            // remove-then-re-add flow depends on: a failed add returns null instead
+            // of throwing and leaves no residue, so the caller can re-register the
+            // old instance under the same name
+            using (var dirA   = new TemporaryDirectory())
+            using (var dirB   = new TemporaryDirectory())
+            using (var config = new FakeConfiguration(new List<Tuple<string, string, string>>(),
+                                                      null, null))
+            {
+                var user = new CapturingUser(false, q => true, (msg, objs) => 0);
+                using (var mgr = new GameInstanceManager(user, config))
+                {
+                    var instA = new GameInstance(new KittenSpaceAgency(), FakeKsaGameDir(dirA), "ksaA");
+                    mgr.AddInstance(instA);
+                    var gameDirB = FakeKsaGameDir(dirB);
+                    File.WriteAllText(Path.Combine(gameDirB, "CKAN"), "");
+
+                    // Act: edit flow removes the old instance, then re-adds at the new path
+                    mgr.RemoveInstance("ksaA");
+                    var result = mgr.AddInstance(gameDirB, "ksaA", user);
+                    if (result == null)
+                    {
+                        mgr.AddInstance(instA);
+                    }
+
+                    // Assert: AddInstance returned null instead of throwing,
+                    // so the caller could restore the old instance
+                    Assert.IsNull(result);
+                    Assert.IsTrue(mgr.HasInstance("ksaA"));
+                    Assert.AreEqual(instA.GameDir, mgr.Instances["ksaA"].GameDir);
+                }
+            }
+        }
+
         // A minimal fake game whose mod directory lives outside GameDir (like KSA),
         // valid enough for GameInstanceManager.AddInstance to accept its instances.
         private static Mock<IGame> SharedModRootGame(string externalModRoot)

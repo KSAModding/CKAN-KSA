@@ -302,7 +302,8 @@ namespace CKAN.CmdLine
                     string path = options.path;
                     if (Manager.AddInstance(path, options.name, user) == null)
                     {
-                        // The user declined, e.g. the shared mod folder confirmation
+                        // Nothing was registered: the user declined a confirmation
+                        // or the game folder was not writable (already reported)
                         return Exit.ERROR;
                     }
                     user.RaiseMessage(Properties.Resources.InstanceAdded, options.name, options.path);
