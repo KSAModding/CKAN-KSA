@@ -35,6 +35,7 @@ namespace Tests.GUI
             Assert.IsNotNull(EmbeddedImages.folderZip);
             Assert.IsNotNull(EmbeddedImages.forward);
             Assert.IsNotNull(EmbeddedImages.info);
+            Assert.IsNotNull(EmbeddedImages.ksa);
             Assert.IsNotNull(EmbeddedImages.ksp);
             Assert.IsNotNull(EmbeddedImages.refresh);
             Assert.IsNotNull(EmbeddedImages.refreshStale);
