@@ -205,12 +205,10 @@ namespace CKAN
         /// </summary>
         /// <param name="instance">The instance to register</param>
         /// <param name="user">IUser to receive the warning; falls back to the manager's User</param>
+        /// <param name="warnSharedModRoot">false to skip the shared-mod-root warning: for re-registering an instance that was registered before (restoring after a failed path edit), or when the user already confirmed it</param>
         /// <returns>The resulting GameInstance object</returns>
         /// <exception cref="NotGameDirKraken">Thrown if the instance is not a valid game instance.</exception>
-        public GameInstance AddInstance(GameInstance instance, IUser? user = null)
-            => AddInstance(instance, user, warnSharedModRoot: true);
-
-        private GameInstance AddInstance(GameInstance instance, IUser? user, bool warnSharedModRoot)
+        public GameInstance AddInstance(GameInstance instance, IUser? user = null, bool warnSharedModRoot = true)
         {
             if (instance.Valid)
             {
@@ -242,6 +240,23 @@ namespace CKAN
                              instance.Name,
                              string.Join(", ", sharers.Select(other => other.Name)),
                              instance.Game.ShortName);
+
+        // A concrete relocation suggestion for the unwritable-game-folder error
+        // that never needs admin rights: a Games folder in the user's profile,
+        // keeping the game's current folder name. The game's short name stands
+        // in when the game sits at a filesystem root, which has no usable
+        // folder name (its rooted "name" would even reset Path.Combine back to
+        // the root itself); "~" stands in on the rare profile-less
+        // environments where UserProfile resolves to empty.
+        internal static string SuggestedRelocationPath(IGame game, string normalizedGameDir)
+        {
+            var dirInfo = new DirectoryInfo(normalizedGameDir);
+            var profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            return Platform.FormatPath(Path.Combine(
+                string.IsNullOrEmpty(profile) ? "~" : profile,
+                "Games",
+                dirInfo.Parent == null ? game.ShortName : dirInfo.Name));
+        }
 
         /// <summary>
         /// Find already registered instances that use the same external mod
@@ -304,28 +319,16 @@ namespace CKAN
                 // transient lock) gets the underlying message, which already
                 // names its own cause.
                 log.Warn("Could not set up the CKAN state folder", exc);
-                var ckanDir = Platform.FormatPath(Path.Combine(Path.GetFullPath(path), "CKAN"));
-                if (exc is UnauthorizedAccessException)
-                {
-                    // A concrete relocation suggestion that never needs admin
-                    // rights: a Games folder in the user's profile, keeping the
-                    // game's current folder name. "~" stands in on the rare
-                    // profile-less environments where UserProfile is empty.
-                    var profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-                    user.RaiseError("{0}", string.Format(
-                        Properties.Resources.GameInstanceManagerStateDirNotWritable,
-                        ckanDir, exc.Message,
-                        Platform.FormatPath(Path.Combine(
-                            string.IsNullOrEmpty(profile) ? "~" : profile,
-                            "Games",
-                            new DirectoryInfo(path).Name))));
-                }
-                else
-                {
-                    user.RaiseError("{0}", string.Format(
-                        Properties.Resources.GameInstanceManagerStateDirCreationFailed,
-                        ckanDir, exc.Message));
-                }
+                // The same resolution the constructor applies, so the message
+                // shows the exact path the instance would have used.
+                var gameDir = GameInstance.NormalizeGameDir(path);
+                var ckanDir = Platform.FormatPath(Path.Combine(gameDir, "CKAN"));
+                user.RaiseError("{0}", exc is UnauthorizedAccessException
+                    ? string.Format(Properties.Resources.GameInstanceManagerStateDirNotWritable,
+                                    ckanDir, exc.Message,
+                                    SuggestedRelocationPath(game, gameDir))
+                    : string.Format(Properties.Resources.GameInstanceManagerStateDirCreationFailed,
+                                    ckanDir, exc.Message));
                 return null;
             }
             if (instance.Valid

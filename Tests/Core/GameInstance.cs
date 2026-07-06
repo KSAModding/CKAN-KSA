@@ -50,6 +50,17 @@ namespace Tests.Core
         }
 
         [Test]
+        public void NormalizeGameDir_FilesystemRoot_CombinesRooted()
+        {
+            // A pure drive letter must keep its trailing separator, otherwise
+            // Path.Combine produces drive-relative paths like K:CKAN
+            var root    = Path.GetPathRoot(Path.GetTempPath())!;
+            var ckanDir = Path.Combine(GameInstance.NormalizeGameDir(root), "CKAN");
+            Assert.AreEqual(CKANPathUtils.NormalizePath(Path.Combine(root, "CKAN")),
+                            CKANPathUtils.NormalizePath(ckanDir));
+        }
+
+        [Test]
         public void IsGameDir()
         {
             var game = new KerbalSpaceProgram();

@@ -263,7 +263,20 @@ namespace CKAN.ConsoleUI {
                 // saved.
                 if (manager.AddInstance(path.Value, name.Value, this) == null)
                 {
-                    manager.AddInstance(instance);
+                    // Re-registering an instance the user already had must not
+                    // repeat the shared-mod-root warning right after the
+                    // decline or error that triggered the restore.
+                    try
+                    {
+                        manager.AddInstance(instance, this, warnSharedModRoot: false);
+                    }
+                    catch (NotGameDirKraken)
+                    {
+                        // The old folder itself stopped being a valid game
+                        // folder mid-edit; there is nothing left to restore,
+                        // but the screen must survive to show what happened.
+                        RaiseError(Properties.Resources.InstancePathNotGameFolderError);
+                    }
                     return false;
                 }
             } else if (name.Value != oldName) {

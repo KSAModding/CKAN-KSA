@@ -875,6 +875,63 @@ namespace Tests.Core
             }
         }
 
+        [Test]
+        public void AddInstance_RestoreSharedRootInstance_DoesNotWarnAgain()
+        {
+            // Arrange: two instances sharing the external mod root, like the
+            // ConsoleUI edit screen's restore after a declined or failed re-add
+            using (var dirA    = new TemporaryDirectory())
+            using (var dirB    = new TemporaryDirectory())
+            using (var modRoot = new TemporaryDirectory())
+            using (var config  = new FakeConfiguration(new List<Tuple<string, string, string>>(),
+                                                       null, null))
+            {
+                var user = new CapturingUser(false, q => true, (msg, objs) => 0);
+                using (var mgr = new GameInstanceManager(user, config))
+                {
+                    var game  = SharedModRootGame(modRoot);
+                    var instA = new GameInstance(game.Object, dirA, "sharedA");
+                    var instB = new GameInstance(game.Object, dirB, "sharedB");
+                    mgr.AddInstance(instA);
+                    mgr.AddInstance(instB);
+                    mgr.RemoveInstance("sharedB");
+                    var restoreUser = new CapturingUser(false, q => true, (msg, objs) => 0);
+
+                    // Act: put the previously registered instance back
+                    mgr.AddInstance(instB, restoreUser, warnSharedModRoot: false);
+
+                    // Assert: no second warning for an instance the user already had
+                    Assert.IsTrue(mgr.HasInstance("sharedB"));
+                    Assert.IsEmpty(restoreUser.RaisedErrors);
+                }
+            }
+        }
+
+        [Test]
+        public void SuggestedRelocationPath_PlainFolder_KeepsFolderName()
+        {
+            using (var dirA = new TemporaryDirectory())
+            {
+                var gameDir    = GameInstance.NormalizeGameDir(dirA);
+                var suggestion = GameInstanceManager.SuggestedRelocationPath(
+                                     new KittenSpaceAgency(), gameDir);
+                StringAssert.EndsWith("Games/" + new DirectoryInfo(gameDir).Name,
+                                      suggestion.Replace('\\', '/'));
+            }
+        }
+
+        [Test]
+        public void SuggestedRelocationPath_FilesystemRootInstall_FallsBackToGameName()
+        {
+            // A game folder at a filesystem root has no usable folder name, and
+            // its rooted "name" would reset Path.Combine back to the root itself
+            var root       = GameInstance.NormalizeGameDir(Path.GetPathRoot(Path.GetTempPath())!);
+            var suggestion = GameInstanceManager.SuggestedRelocationPath(
+                                 new KittenSpaceAgency(), root);
+            StringAssert.EndsWith("Games/KSA", suggestion.Replace('\\', '/'));
+            Assert.AreNotEqual(root, suggestion);
+        }
+
         // A minimal fake game whose mod directory lives outside GameDir (like KSA),
         // valid enough for GameInstanceManager.AddInstance to accept its instances.
         private static Mock<IGame> SharedModRootGame(string externalModRoot)
