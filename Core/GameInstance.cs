@@ -36,20 +36,32 @@ namespace CKAN
         {
             Game = game;
             Name = name;
-            // Make sure our path is absolute and has normalised slashes.
-            GameDir = CKANPathUtils.NormalizePath(Path.GetFullPath(gameDir));
+            GameDir = NormalizeGameDir(gameDir);
+            SetupCkanDirectories();
+            LoadCompatibleVersions();
+        }
+
+        /// <summary>
+        /// Resolve a game folder path the way an instance stores it:
+        /// absolute, with normalised slashes.
+        /// Shared with error reporting about paths where no instance could
+        /// be constructed, so messages show the same path the instance
+        /// would have used.
+        /// </summary>
+        internal static string NormalizeGameDir(string gameDir)
+        {
+            var dir = CKANPathUtils.NormalizePath(Path.GetFullPath(gameDir));
             if (Platform.IsWindows)
             {
                 // Normalized slashes are bad for pure drive letters,
                 // Path.Combine turns them into drive-relative paths like
                 // K:GameData/whatever
-                if (Regex.IsMatch(GameDir, @"^[a-zA-Z]:$"))
+                if (Regex.IsMatch(dir, @"^[a-zA-Z]:$"))
                 {
-                    GameDir = $"{GameDir}/";
+                    dir = $"{dir}/";
                 }
             }
-            SetupCkanDirectories();
-            LoadCompatibleVersions();
+            return dir;
         }
 
         /// <returns>

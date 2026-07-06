@@ -206,6 +206,17 @@ Update CKAN to load this game instance.</value></data>
 Manage mods through only one of these instances.
 See https://github.com/KSAModding/CKAN-KSA/issues/19 for details.</value></data>
   <data name="GameInstanceManagerSharedModRootPrompt" xml:space="preserve"><value>Add it anyway?</value></data>
+  <data name="GameInstanceManagerStateDirNotWritable" xml:space="preserve"><value>CKAN could not create its data folder at {0}:
+{1}
+
+CKAN keeps the data for an instance in a "CKAN" folder inside the game folder, so adding an instance needs write access there. Installs in a protected location, like KSA's default install path under Program Files, can only be changed with administrator rights.
+Either grant your user account write access to the game folder, or move or reinstall the game to a folder you can write to, for example {2}, then add the instance again.
+See https://github.com/KSAModding/CKAN-KSA/issues/46 for details.</value></data>
+  <data name="GameInstanceManagerStateDirCreationFailed" xml:space="preserve"><value>CKAN could not set up its data folder at {0}:
+{1}
+
+CKAN keeps the data for an instance in a "CKAN" folder inside the game folder. Fix the reported problem (for example rename a file already using the "CKAN" name, or close the program that is locking the folder), then add the instance again.
+See https://github.com/KSAModding/CKAN-KSA/issues/46 for details.</value></data>
   <data name="GameInstanceManagerCacheMigrationPrompt" xml:space="preserve"><value>Old cache folder contains {0}. New cache folder has {1} free.
 What would you like to do?</value></data>
   <data name="GameInstanceManagerCacheMigrationPromptFreeSpaceUnknown" xml:space="preserve"><value>Old cache folder contains {0}. New cache folder has unknown free space.

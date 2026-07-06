@@ -173,7 +173,8 @@ namespace CKAN.GUI
                     }
                     instanceName = manager.GetNextValidInstanceName(instanceName);
                     // null means the user declined the shared mod folder
-                    // confirmation or cancelled the game selection dialog:
+                    // confirmation, cancelled the game selection dialog, or the
+                    // game folder was not writable (an error was already shown):
                     // nothing was registered, so change nothing here
                     if (manager.AddInstance(path, instanceName, user) != null)
                     {

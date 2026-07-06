@@ -41,12 +41,13 @@ namespace CKAN.ConsoleUI {
         /// <summary>
         /// Add the instance
         /// </summary>
-        /// <returns>true if the instance was added, false if the user declined a confirmation or cancelled the game selection (keeps the screen open)</returns>
+        /// <returns>true if the instance was added, false if nothing was registered, e.g. a declined confirmation or an unwritable game folder (keeps the screen open)</returns>
         protected override bool Save()
             // Pass ourselves as the IUser so the shared mod folder confirmation
             // surfaces as a dialog in the ConsoleUI. null means the user declined
-            // that confirmation or cancelled the game selection dialog; either
-            // way nothing was registered, so the screen must not close as if the
+            // that confirmation, cancelled the game selection dialog, or the game
+            // folder was not writable (an error was already shown); either way
+            // nothing was registered, so the screen must not close as if the
             // instance had been added.
             => manager.AddInstance(path.Value, name.Value, this) != null;
 

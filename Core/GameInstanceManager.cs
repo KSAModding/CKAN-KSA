@@ -205,12 +205,10 @@ namespace CKAN
         /// </summary>
         /// <param name="instance">The instance to register</param>
         /// <param name="user">IUser to receive the warning; falls back to the manager's User</param>
+        /// <param name="warnSharedModRoot">false to skip the shared-mod-root warning: for re-registering an instance that was registered before (restoring after a failed path edit), or when the user already confirmed it</param>
         /// <returns>The resulting GameInstance object</returns>
         /// <exception cref="NotGameDirKraken">Thrown if the instance is not a valid game instance.</exception>
-        public GameInstance AddInstance(GameInstance instance, IUser? user = null)
-            => AddInstance(instance, user, warnSharedModRoot: true);
-
-        private GameInstance AddInstance(GameInstance instance, IUser? user, bool warnSharedModRoot)
+        public GameInstance AddInstance(GameInstance instance, IUser? user = null, bool warnSharedModRoot = true)
         {
             if (instance.Valid)
             {
@@ -243,6 +241,23 @@ namespace CKAN
                              string.Join(", ", sharers.Select(other => other.Name)),
                              instance.Game.ShortName);
 
+        // A concrete relocation suggestion for the unwritable-game-folder error
+        // that never needs admin rights: a Games folder in the user's profile,
+        // keeping the game's current folder name. The game's short name stands
+        // in when the game sits at a filesystem root, which has no usable
+        // folder name (its rooted "name" would even reset Path.Combine back to
+        // the root itself); "~" stands in on the rare profile-less
+        // environments where UserProfile resolves to empty.
+        internal static string SuggestedRelocationPath(IGame game, string normalizedGameDir)
+        {
+            var dirInfo = new DirectoryInfo(normalizedGameDir);
+            var profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            return Platform.FormatPath(Path.Combine(
+                string.IsNullOrEmpty(profile) ? "~" : profile,
+                "Games",
+                dirInfo.Parent == null ? game.ShortName : dirInfo.Name));
+        }
+
         /// <summary>
         /// Find already registered instances that use the same external mod
         /// directory as the given instance.
@@ -271,11 +286,14 @@ namespace CKAN
         /// is asked to confirm and can decline, unlike the non-interactive
         /// paths (Steam import, clone, fake, autodetection), which register
         /// with a warning.
+        /// A game folder CKAN cannot write to (its per-instance state lives in
+        /// GameDir/CKAN) is reported with an actionable error instead of the
+        /// raw exception, and nothing is registered.
         /// </summary>
         /// <param name="path">The path of the instance</param>
         /// <param name="name">The name of the instance</param>
         /// <param name="user">IUser object for interaction</param>
-        /// <returns>The resulting GameInstance object, or null if the user declined</returns>
+        /// <returns>The resulting GameInstance object, or null if nothing was registered (the user declined a confirmation or cancelled a dialog, or the game folder was not writable)</returns>
         /// <exception cref="NotGameDirKraken">Thrown if the instance is not a valid game instance.</exception>
         public GameInstance? AddInstance(string path, string name, IUser user)
         {
@@ -284,7 +302,35 @@ namespace CKAN
             {
                 return null;
             }
-            var instance = new GameInstance(game, path, name);
+            GameInstance instance;
+            try
+            {
+                instance = new GameInstance(game, path, name);
+            }
+            catch (Exception exc) when (exc is UnauthorizedAccessException or IOException)
+            {
+                // Constructing the instance sets up CKAN's state folder inside
+                // the game folder. Nothing has been registered at this point,
+                // so report the failure instead of surfacing the raw exception.
+                // Access denied means the game is installed somewhere the user
+                // cannot write, like KSA's default install location under
+                // Program Files, and gets the full relocation guidance; any
+                // other IO error (a file squatting on the CKAN name, a
+                // transient lock) gets the underlying message, which already
+                // names its own cause.
+                log.Warn("Could not set up the CKAN state folder", exc);
+                // The same resolution the constructor applies, so the message
+                // shows the exact path the instance would have used.
+                var gameDir = GameInstance.NormalizeGameDir(path);
+                var ckanDir = Platform.FormatPath(Path.Combine(gameDir, "CKAN"));
+                user.RaiseError("{0}", exc is UnauthorizedAccessException
+                    ? string.Format(Properties.Resources.GameInstanceManagerStateDirNotWritable,
+                                    ckanDir, exc.Message,
+                                    SuggestedRelocationPath(game, gameDir))
+                    : string.Format(Properties.Resources.GameInstanceManagerStateDirCreationFailed,
+                                    ckanDir, exc.Message));
+                return null;
+            }
             if (instance.Valid
                 && InstancesSharingModRoot(instance) is { Length: > 0 } sharers
                 && !user.RaiseYesNoDialog(SharedModRootWarning(instance, sharers)

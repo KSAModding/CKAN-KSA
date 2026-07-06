@@ -233,7 +233,7 @@ namespace CKAN.ConsoleUI {
         /// Similar to adding, except we have to remove the old instance,
         /// and there's an API specifically for renaming.
         /// </summary>
-        /// <returns>true to close the screen, false when re-adding the changed path was declined or cancelled (the old instance is restored and the screen stays open)</returns>
+        /// <returns>true to close the screen, false when re-adding the changed path did not register anything, e.g. declined or unwritable (the old instance is restored and the screen stays open)</returns>
         protected override bool Save()
         {
             if (stabilityToleranceButtons?.Selection != null)
@@ -256,13 +256,27 @@ namespace CKAN.ConsoleUI {
                 // and replace it with a new one, whether or not the name is changed.
                 manager.RemoveInstance(oldName);
                 // As in the Add screen, pass ourselves as the IUser so the shared
-                // mod folder confirmation shows up. If the user declines it (or
-                // cancels the game selection), put the old instance back instead
-                // of losing it entirely, and keep the screen open so the edit is
-                // not silently dropped as if it had been saved.
+                // mod folder confirmation shows up. If the user declines it, cancels
+                // the game selection, or the new game folder is not writable, put
+                // the old instance back instead of losing it entirely, and keep the
+                // screen open so the edit is not silently dropped as if it had been
+                // saved.
                 if (manager.AddInstance(path.Value, name.Value, this) == null)
                 {
-                    manager.AddInstance(instance);
+                    // Re-registering an instance the user already had must not
+                    // repeat the shared-mod-root warning right after the
+                    // decline or error that triggered the restore.
+                    try
+                    {
+                        manager.AddInstance(instance, this, warnSharedModRoot: false);
+                    }
+                    catch (NotGameDirKraken)
+                    {
+                        // The old folder itself stopped being a valid game
+                        // folder mid-edit; there is nothing left to restore,
+                        // but the screen must survive to show what happened.
+                        RaiseError(Properties.Resources.InstancePathNotGameFolderError);
+                    }
                     return false;
                 }
             } else if (name.Value != oldName) {
