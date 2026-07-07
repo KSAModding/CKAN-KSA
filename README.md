@@ -3,8 +3,6 @@
 [<img src="https://img.shields.io/github/downloads/KSAModding/CKAN-KSA/total.svg?label=%E2%A4%93Download&style=plastic" height="48px" style="height:48px;" />](https://github.com/KSAModding/CKAN-KSA/releases/latest)
 
 [![Coverage Status](https://coveralls.io/repos/github/KSAModding/CKAN-KSA/badge.svg?branch=master)](https://coveralls.io/github/KSAModding/CKAN-KSA?branch=master)
-[![NuGet Version](https://img.shields.io/nuget/v/CKAN?label=NuGet&style=plastic&logo=nuget)](https://www.nuget.org/packages/CKAN)
-[![Crowdin](https://img.shields.io/badge/Crowdin-2E3340.svg?plastic&logo=Crowdin&logoColor=white)](https://crowdin.com/project/ckan)
 
 
 [Click here to open a new CKAN issue][6]
