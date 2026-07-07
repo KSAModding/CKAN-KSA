@@ -1,10 +1,8 @@
-# The Comprehensive Kerbal Archive Network (CKAN)
+# The Comprehensive Kitten Archive Network (CKAN)
 
-[<img src="https://img.shields.io/github/downloads/KSP-CKAN/CKAN/total.svg?label=%E2%A4%93Download&style=plastic" height="48px" style="height:48px;" />](https://github.com/KSP-CKAN/CKAN/releases/latest)
+[<img src="https://img.shields.io/github/downloads/KSAModding/CKAN-KSA/total.svg?label=%E2%A4%93Download&style=plastic" height="48px" style="height:48px;" />](https://github.com/KSAModding/CKAN-KSA/releases/latest)
 
-[![Coverage Status](https://coveralls.io/repos/github/KSP-CKAN/CKAN/badge.svg?branch=master)](https://coveralls.io/github/KSP-CKAN/CKAN?branch=master)
-[![NuGet Version](https://img.shields.io/nuget/v/CKAN?label=NuGet&style=plastic&logo=nuget)](https://www.nuget.org/packages/CKAN)
-[![Crowdin](https://img.shields.io/badge/Crowdin-2E3340.svg?plastic&logo=Crowdin&logoColor=white)](https://crowdin.com/project/ckan)
+[![Coverage Status](https://coveralls.io/repos/github/KSAModding/CKAN-KSA/badge.svg?branch=master)](https://coveralls.io/github/KSAModding/CKAN-KSA?branch=master)
 
 
 [Click here to open a new CKAN issue][6]
@@ -62,12 +60,12 @@ Our sincere thanks to [SignPath.io][10] for allowing us to use their free code s
 
 Note: Are you looking for the Open Data portal software called CKAN? If so, their GitHub repository is found [here][9].
 
- [1]: https://github.com/KSP-CKAN/CKAN/commits/master
- [2]: https://github.com/KSP-CKAN/CKAN/wiki/User-guide
- [3]: https://github.com/KSP-CKAN/CKAN/wiki/Adding-a-mod-to-the-CKAN#verifying-metadata-files
+ [1]: https://github.com/KSAModding/CKAN-KSA/commits/master
+ [2]: https://github.com/KSAModding/CKAN-KSA/wiki/User-guide
+ [3]: https://github.com/KSAModding/CKAN-KSA/wiki/Adding-a-mod-to-the-CKAN#verifying-metadata-files
  [4]: https://github.com/KSP-CKAN/.github/blob/master/CONTRIBUTING.md
- [5]: https://github.com/KSP-CKAN/CKAN/wiki
- [6]: https://github.com/KSP-CKAN/CKAN/issues/new
+ [5]: https://github.com/KSAModding/CKAN-KSA/wiki
+ [6]: https://github.com/KSAModding/CKAN-KSA/issues/new
  [7]: https://github.com/KSP-CKAN/NetKAN/issues/new
  [8]: https://schemastore.org/
  [9]: https://github.com/ckan/ckan
