@@ -1515,11 +1515,10 @@ namespace CKAN.GUI
                     modules.Select(module =>
                                        // "Upgrade" to latest metadata for same module version
                                        // (avoids removing and re-installing dependencies)
-                                       new ModUpgrade(module,
-                                                      registry.GetModuleByVersion(module.identifier,
-                                                                                  module.version)
-                                                              ?? module,
-                                                      true, false, true, config)
+                                       new ModReinstall(registry.GetModuleByVersion(module.identifier,
+                                                                                    module.version)
+                                                        ?? module,
+                                                        true, false, true, config)
                                        as ModChange)
                            .ToList(),
                     null);

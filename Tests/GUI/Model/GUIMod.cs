@@ -265,6 +265,69 @@ namespace Tests.GUI
                 Assert.IsFalse(sut.Equals(other2));
             }
         }
+
+        [Test]
+        public void GetModChanges_Replace_Works()
+        {
+            // Arrange
+            var repoData = new RepositoryDataManager();
+            using (var inst     = new DisposableKSP())
+            using (var cacheDir = new TemporaryDirectory())
+            using (var cache    = new NetModuleCache(cacheDir))
+            {
+                var sut = new GUIMod(TestData.ModuleManagerModule(), repoData, Registry.Empty(repoData),
+                                     inst.KSP.StabilityToleranceConfig, inst.KSP,
+                                     cache, false, true, true);
+
+                // Act
+                var changes = sut.GetModChanges(false, true, false, false, inst.KSP, new HashSet<string>())
+                                 .ToArray();
+
+                // Assert
+                Assert.AreEqual(1, changes.Length);
+                Assert.AreEqual(GUIModChangeType.Replace, changes[0].ChangeType);
+            }
+        }
+
+        [Test]
+        public void GetModChanges_Reinstall_Works()
+        {
+            // Arrange
+            var user = new NullUser();
+            using (var inst     = new DisposableKSP())
+            using (var repo     = new TemporaryRepository(RelationshipResolverTests.MergeWithDefaults(
+                                      @"{
+                                          ""identifier"": ""InstalledMod"",
+                                          ""version"":    ""1.0""
+                                      }",
+                                      @"{
+                                          ""identifier"": ""InstalledMod"",
+                                          ""version"":    ""2.0""
+                                      }")
+                                     .ToArray()))
+            using (var repoData = new TemporaryRepositoryData(user, repo.repo))
+            using (var cacheDir = new TemporaryDirectory())
+            using (var cache    = new NetModuleCache(cacheDir))
+            {
+                var registry = new CKAN.Registry(repoData.Manager, repo.repo);
+                var installed = registry.GetModuleByVersion("InstalledMod", "1.0")!;
+                var upgrade   = registry.GetModuleByVersion("InstalledMod", "2.0")!;
+                registry.RegisterModule(installed, Array.Empty<string>(), inst.KSP, false);
+
+                var sut = new GUIMod(registry.InstalledModule("InstalledMod")!,
+                                     repoData.Manager, registry,
+                                     inst.KSP.StabilityToleranceConfig, inst.KSP,
+                                     cache, false, true, true);
+
+                // Act
+                var changes = sut.GetModChanges(true, false, true, true, inst.KSP, new HashSet<string>())
+                                 .ToArray();
+
+                // Assert
+                Assert.AreEqual(1, changes.Length);
+                Assert.AreEqual(GUIModChangeType.Update, changes[0].ChangeType);
+            }
+        }
     }
 }
 

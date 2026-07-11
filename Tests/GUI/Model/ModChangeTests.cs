@@ -53,15 +53,8 @@ namespace Tests.GUI
             }
         }
 
-        [TestCase(false, false, false, "Re-install (missing folders or files)"),
-         TestCase(false, true,  false, "Re-install (metadata changed)"),
-         TestCase(false, true,  true,  "Re-install (metadata changed)"),
-         TestCase(true,  false, false, "Re-install (user requested)"),
-         TestCase(true,  true,  false, "Re-install (user requested)")]
-        public void AllProperties_Upgrade_Correct(bool   userReinstall,
-                                                  bool   metadataChanged,
-                                                  bool   installedFilesChanged,
-                                                  string reason)
+        [Test]
+        public void AllProperties_Upgrade_Correct()
         {
             // Arrange
             var user = new NullUser();
@@ -73,25 +66,63 @@ namespace Tests.GUI
                 // Act
                 var sut = new ModUpgrade(TestData.ModuleManagerModule(),
                                          TestData.ModuleManagerModule(),
-                                         userReinstall, metadataChanged, installedFilesChanged,
                                          config);
 
                 // Assert
                 Assert.IsTrue(sut.IsUserRequested);
-                Assert.AreEqual(metadataChanged && !installedFilesChanged,
+                Assert.AreEqual("Update to version 2.5.1.", sut.Description);
+                Assert.AreEqual("Update ModuleManager 2.5.1 (Update to version 2.5.1.)", sut.ToString());
+                Assert.AreEqual(new ModUpgrade(TestData.ModuleManagerModule(),
+                                               TestData.ModuleManagerModule(),
+                                               config),
+                                sut);
+                Assert.AreNotEqual(new ModChange(TestData.BurnControllerModule(),
+                                                 GUIModChangeType.Update,
+                                                 config),
+                                   sut);
+                Assert.AreNotEqual(new ModChange(TestData.ModuleManagerModule(),
+                                                 GUIModChangeType.Install,
+                                                 config),
+                                   sut);
+            }
+        }
+
+        [TestCase(false, false, false, "Re-install (missing folders or files)"),
+         TestCase(false, true,  false, "Re-install (metadata changed)"),
+         TestCase(false, true,  true,  "Re-install (metadata changed)"),
+         TestCase(true,  false, false, "Re-install (user requested)"),
+         TestCase(true,  true,  false, "Re-install (user requested)")]
+        public void AllProperties_Reinstall_Correct(bool   userReinstall,
+                                                    bool   metadataChanged,
+                                                    bool   reinstallFiles,
+                                                    string reason)
+        {
+            // Arrange
+            var user = new NullUser();
+            using (var inst    = new DisposableKSP())
+            using (var config  = new FakeConfiguration(inst.KSP, inst.KSP.Name))
+            using (var manager = new GameInstanceManager(user, config))
+            {
+
+                // Act
+                var sut = new ModReinstall(TestData.ModuleManagerModule(),
+                                           userReinstall, metadataChanged, reinstallFiles,
+                                           config);
+
+                // Assert
+                Assert.IsTrue(sut.IsUserRequested);
+                Assert.AreEqual(!userReinstall && metadataChanged && !reinstallFiles,
                                 sut.SkipReinstallingFiles);
                 Assert.AreEqual(reason, sut.Description);
                 Assert.AreEqual($"Update ModuleManager 2.5.1 ({reason})",
                                 sut.ToString());
-                Assert.AreEqual(new ModUpgrade(TestData.ModuleManagerModule(),
-                                               TestData.ModuleManagerModule(),
-                                               userReinstall, metadataChanged, false,
-                                               config),
+                Assert.AreEqual(new ModReinstall(TestData.ModuleManagerModule(),
+                                                 userReinstall, metadataChanged, false,
+                                                 config),
                                 sut);
-                Assert.AreNotEqual(new ModUpgrade(TestData.BurnControllerModule(),
-                                                  TestData.BurnControllerModule(),
-                                                  userReinstall, metadataChanged, false,
-                                                  config),
+                Assert.AreNotEqual(new ModReinstall(TestData.BurnControllerModule(),
+                                                    userReinstall, metadataChanged, false,
+                                                    config),
                                    sut);
             }
         }
