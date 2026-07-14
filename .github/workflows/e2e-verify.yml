@@ -1,0 +1,156 @@
+# Fork-only end-to-end proof of the KSA pipeline (KSAModding/CKAN-KSA#41):
+# build ckan/netkan from this repo, build the metadata tester image with its
+# NetKAN-Infra and xKAN-meta_testing pip installs redirected to the KSAModding
+# forks, then run the tester with game KSA against every netkan in
+# KSAModding/KSA-NetKAN, which inflates each one and installs the result into
+# a faked KSA instance.
+#
+# The real KSA-NetKAN / KSA-CKAN-meta validation workflows stay gated on the
+# upstream-built kspckan/metadata image learning KSA; this workflow builds the
+# same image from fork resources so the whole pipeline can be verified today.
+# It lives only on the e2e-verify branch and is not part of the upstream PR.
+name: E2E verify KSA pipeline
+
+on:
+  push:
+    branches:
+      - e2e-verify
+  workflow_dispatch:
+    inputs:
+      client-ref:
+        description: CKAN-KSA ref to build ckan/netkan from
+        type: string
+        default: master
+      netkan-infra-ref:
+        description: KSAModding/NetKAN-Infra ref pip-installed into the image
+        type: string
+        default: master
+      xkan-ref:
+        description: KSAModding/xKAN-meta_testing ref pip-installed into the image
+        type: string
+        default: master
+      ksa-netkan-ref:
+        description: KSAModding/KSA-NetKAN ref with the netkans to test
+        type: string
+        default: main
+
+concurrency: e2e-verify
+
+permissions:
+  contents: read
+
+jobs:
+  e2e-verify:
+    # ubuntu-22.04 for Mono, like build.yml's Linux job (the Release build
+    # also compiles the net481 targets)
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    steps:
+      # On push (no inputs context) every ref falls back to its default, so a
+      # push to this branch always verifies current master plus fork masters;
+      # only the workflow file itself is read from this branch. To exercise
+      # client-code changes that live on another branch, dispatch with
+      # client-ref pointing at it.
+      - name: Checkout client
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.client-ref || 'master' }}
+      - name: Restore cache for _build/tools
+        uses: actions/cache@v5
+        with:
+          path: _build/tools
+          key: build-tools-${{ hashFiles('build.sh', 'build.ps1', 'build/*') }}
+      - name: Restore cache for _build/lib/nuget
+        uses: actions/cache@v5
+        with:
+          path: |
+            _build/lib/nuget
+            ~/.nuget/packages
+          key: nuget-oldref-modules-${{ hashFiles('**/packages.config') }}-${{ hashFiles('**/*.csproj') }}
+      # The default cake target ends in Repack-Ckan, which for Release also
+      # publishes the linux-x64 CKAN-CmdLine and CKAN-NetKAN binaries that
+      # metadata.Dockerfile ADDs; the test suite already runs per PR.
+      - name: Build ckan and netkan (Release, no tests)
+        run: ./build.sh --configuration=Release
+
+      - name: Redirect metadata image pip installs to the KSAModding forks
+        env:
+          INFRA_REF: ${{ inputs.netkan-infra-ref || 'master' }}
+          XKAN_REF: ${{ inputs.xkan-ref || 'master' }}
+        run: |
+          # The refs are spliced into a sed program and a pip URL below, so
+          # reject anything beyond plain branch/tag/sha characters up front.
+          for ref in "$INFRA_REF" "$XKAN_REF"
+          do
+            if ! printf '%s' "$ref" | grep -Eqx '[A-Za-z0-9._/-]+'
+            then
+              echo "::error::ref '$ref' contains characters outside [A-Za-z0-9._/-]"
+              exit 1
+            fi
+          done
+          sed -i \
+            -e "s|git+https://github.com/KSP-CKAN/NetKAN-Infra#|git+https://github.com/KSAModding/NetKAN-Infra@${INFRA_REF}#|" \
+            -e "s|git+https://github.com/KSP-CKAN/xKAN-meta_testing'|git+https://github.com/KSAModding/xKAN-meta_testing@${XKAN_REF}'|" \
+            metadata.Dockerfile
+          if [ "$(grep -c 'git+https://github.com/KSAModding/' metadata.Dockerfile)" != 2 ] \
+            || grep -q 'git+https://github.com/KSP-CKAN/' metadata.Dockerfile
+          then
+            echo '::error file=metadata.Dockerfile::pip URL redirect did not rewrite exactly the two KSP-CKAN pip installs; did the Dockerfile change?'
+            exit 1
+          fi
+          grep -n 'KSAModding' metadata.Dockerfile
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+      - name: Build KSA-capable metadata image
+        uses: docker/build-push-action@v7
+        with:
+          file: metadata.Dockerfile
+          context: .
+          build-args: configuration=Release
+          tags: kspckan/metadata:ksa-e2e
+          load: true
+
+      - name: Checkout KSA-NetKAN
+        uses: actions/checkout@v6
+        with:
+          repository: KSAModding/KSA-NetKAN
+          ref: ${{ inputs.ksa-netkan-ref || 'main' }}
+          path: ksa-netkan
+      # Run the image the way GitHub runs docker actions (the entrypoint reads
+      # INPUT_* variables), with the netkan checkout as the workspace. Not
+      # setting INPUT_DIFF_META_ROOT is deliberate: without it no install is
+      # skipped as already-published, so every inflated ckan really installs.
+      - name: Run the metadata tester with game KSA
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >
+          docker run --rm
+          -e INPUT_GAME=KSA
+          -e INPUT_SOURCE=netkans
+          -e INPUT_LOG_LEVEL=info
+          -e GITHUB_TOKEN
+          -e RUNNER_DEBUG
+          -v "$GITHUB_WORKSPACE/ksa-netkan:/github/workspace"
+          -w /github/workspace
+          kspckan/metadata:ksa-e2e
+
+      - name: Upload inflated ckans
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: inflated-ckans
+          path: ksa-netkan/.ckans
+          include-hidden-files: true
+      - name: Add inflated ckans to the job summary
+        if: always()
+        run: |
+          {
+            echo '## Inflated ckans'
+            files=$(ls -1 ksa-netkan/.ckans 2>/dev/null)
+            if [ -n "$files" ]
+            then
+              echo "$files"
+            else
+              echo '(none)'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
