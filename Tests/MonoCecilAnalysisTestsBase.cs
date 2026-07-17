@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Collections.Generic;
+using System.Reflection;
 
 using Mono.Cecil;
 using Mono.Cecil.Cil;
@@ -64,6 +65,22 @@ namespace Tests
                       ?.Instructions
                        .Where(instr => callOpCodes.Contains(instr.OpCode.Name))
                       ?? Enumerable.Empty<Instruction>();
+
+        protected static Dictionary<string, MethodDefinition> AllMethodsByFullyQualifiedName(IEnumerable<Assembly> assemblies)
+            => assemblies.Select(a => ModuleDefinition.ReadModule(a.Location))
+                         .SelectMany(m => m.Types
+                                           .SelectMany(GetAllNestedTypes)
+                                           .SelectMany(t => t.Methods)
+                                           .Where(m => m.HasBody)
+                                           .SelectMany(GetMethodAndTasks))
+                         .GroupBy(FullyQualifiedName)
+                         .Where(grp => grp.Count() == 1)
+                         .ToDictionary(grp => grp.Key,
+                                       grp => grp.Single());
+
+        private static IEnumerable<MethodDefinition> GetMethodAndTasks(MethodDefinition meth)
+            => Enumerable.Repeat(meth, 1)
+                         .Concat(FindStartedTasks(meth).Select(stack => stack.Last()));
 
         // Property setters are virtual and have references instead of definitions
         private static MethodDefinition? GetSetterDef(MethodReference? mr)
