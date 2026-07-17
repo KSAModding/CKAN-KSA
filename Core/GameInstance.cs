@@ -372,8 +372,9 @@ namespace CKAN
                     {
                         StartInfo = new ProcessStartInfo()
                         {
-                            FileName  = binary,
-                            Arguments = string.Join(" ", split.Skip(1))
+                            FileName        = binary,
+                            Arguments       = string.Join(" ", split.Skip(1)),
+                            UseShellExecute = true,
                         },
                         EnableRaisingEvents = true
                     };
