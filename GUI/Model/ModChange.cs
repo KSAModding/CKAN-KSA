@@ -139,45 +139,54 @@ namespace CKAN.GUI
     #endif
     public class ModUpgrade : ModChange
     {
-        public ModUpgrade(CkanModule       mod,
-                          CkanModule       targetMod,
-                          bool             userReinstall,
-                          bool             metadataChanged,
-                          bool             installedFilesChanged,
-                          IConfiguration   config)
+        public ModUpgrade(CkanModule     mod,
+                          CkanModule     targetMod,
+                          IConfiguration config)
             : base(mod, GUIModChangeType.Update, config)
         {
-            this.targetMod             = targetMod;
-            this.userReinstall         = userReinstall;
-            this.metadataChanged       = metadataChanged;
-            this.installedFilesChanged = installedFilesChanged;
+            this.targetMod = targetMod;
         }
 
         public override string NameAndStatus(NetModuleCache cache)
             => cache.DescribeAvailability(config, targetMod);
 
         public override string Description
-            => IsReinstall
-                ? userReinstall ? Properties.Resources.MainChangesetReinstallUser
-                                : metadataChanged ? Properties.Resources.MainChangesetReinstallMetadataChanged
-                                                  : Properties.Resources.MainChangesetReinstallMissing
-                : string.Format(Properties.Resources.MainChangesetUpdateSelected,
-                                targetMod.version);
+            => string.Format(Properties.Resources.MainChangesetUpdateSelected,
+                             targetMod.version);
 
         /// <summary>
         /// The target version for upgrading
         /// </summary>
         public CkanModule targetMod;
+    }
 
-        private bool IsReinstall
-            => targetMod.identifier == Mod.identifier
-                && targetMod.version == Mod.version;
-
-        public bool SkipReinstallingFiles
-            => metadataChanged && !installedFilesChanged;
+    #if NET5_0_OR_GREATER
+    [SupportedOSPlatform("windows")]
+    #endif
+    public class ModReinstall : ModChange
+    {
+        public ModReinstall(CkanModule     mod,
+                            bool           userReinstall,
+                            bool           metadataChanged,
+                            bool           reinstallFiles,
+                            IConfiguration config)
+            : base(mod, GUIModChangeType.Update, config)
+        {
+            this.userReinstall   = userReinstall;
+            this.metadataChanged = metadataChanged;
+            this.reinstallFiles  = reinstallFiles;
+        }
 
         private readonly bool userReinstall;
         private readonly bool metadataChanged;
-        private readonly bool installedFilesChanged;
+        private readonly bool reinstallFiles;
+
+        public override string Description
+            => userReinstall   ? Properties.Resources.MainChangesetReinstallUser
+             : metadataChanged ? Properties.Resources.MainChangesetReinstallMetadataChanged
+             :                   Properties.Resources.MainChangesetReinstallMissing;
+
+        public bool SkipReinstallingFiles
+            => !userReinstall && metadataChanged && !reinstallFiles;
     }
 }
