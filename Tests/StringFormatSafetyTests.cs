@@ -1,7 +1,9 @@
 using System;
 using System.Linq;
 using System.Text.RegularExpressions;
+#if NETFRAMEWORK || NETSTANDARD2_0
 using System.Collections.Generic;
+#endif
 using System.Reflection;
 using System.Diagnostics.CodeAnalysis;
 
@@ -29,21 +31,12 @@ namespace Tests
         public void AssemblyModule_StringSyntaxCompositeFormat_SameOrLiteralsOnly(object[] types)
         {
             // Arrange
-            var methodsByName = types.OfType<Type>()
-                                     .Select(t => Assembly.GetAssembly(t))
-                                     .OfType<Assembly>()
-                                     .Select(a => ModuleDefinition.ReadModule(a.Location))
-                                     .SelectMany(m => m.Types
-                                                       .SelectMany(GetAllNestedTypes)
-                                                       .SelectMany(t => t.Methods)
-                                                       .SelectMany(GetMethodAndTasks))
-                                     .GroupBy(FullyQualifiedName)
-                                     .Where(grp => grp.Count() == 1)
-                                     .ToDictionary(grp => grp.Key,
-                                                   grp => grp.Single());
-            var specialNames = methodsByName.Values.Where(AnyParamHasStringSyntaxAttribute)
-                                                   .Select(FullyQualifiedName)
-                                                   .ToHashSet();
+            var methodsByName = AllMethodsByFullyQualifiedName(types.OfType<Type>()
+                                                                    .Select(Assembly.GetAssembly)
+                                                                    .OfType<Assembly>());
+            var specialNames = methodsByName.Where(kvp => AnyParamHasStringSyntaxAttribute(kvp.Value))
+                                            .Select(kvp => kvp.Key)
+                                            .ToHashSet();
 
             // Act / Assert
             Assert.Multiple(() =>
@@ -73,15 +66,15 @@ namespace Tests
                        Operand: MethodReference mRef,
                    } => FullyQualifiedName(mRef),
                    {
-                       OpCode:  {Name: "ldstr"},
+                       OpCode:  { Name: "ldstr" },
                        Operand: string s,
                    } => $"literal \"{s}\"",
                    {
-                       OpCode:  {Name: "ldfld"},
+                       OpCode:  { Name: "ldfld" },
                        Operand: FieldReference fRef,
                    } => $"field \"{fRef.Name}\"",
                    {
-                       OpCode: {Name: string a},
+                       OpCode: { Name: string a },
                    } => ldargPattern.TryMatch(a, out Match? argM)
                         && int.TryParse(argM.Groups["argNum"].Value, out int argNum)
                         && argNum > 0 && argNum <= parent.Parameters.Count
@@ -101,20 +94,15 @@ namespace Tests
                       RegexOptions.Compiled);
 
         private static bool IsEmptyArray(Instruction instr)
-            => instr.OpCode.Name == "call"
-                && instr.Operand is MethodReference mRef
-                && mRef.Name == "Empty";
+            => instr.OpCode == OpCodes.Call
+               && instr.Operand is MethodReference { Name: "Empty" };
 
         private static bool IsI18nResource(Instruction instr)
             => instr.Operand is MethodReference mRef
-                && FullyQualifiedName(mRef).Contains(".Properties.Resources.");
+               && FullyQualifiedName(mRef).Contains(".Properties.Resources.");
 
         private static bool IsStringLiteral(Instruction instr)
-            => instr.OpCode.Name == "ldstr" && instr.Operand is string;
-
-        private static IEnumerable<MethodDefinition> GetMethodAndTasks(MethodDefinition meth)
-            => Enumerable.Repeat(meth, 1)
-                         .Concat(FindStartedTasks(meth).Select(stack => stack.Last()));
+            => instr.OpCode == OpCodes.Ldstr && instr.Operand is string;
 
         private static readonly Type strSynAttrib = typeof(StringSyntaxAttribute);
 
