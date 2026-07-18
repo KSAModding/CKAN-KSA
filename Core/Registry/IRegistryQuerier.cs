@@ -324,72 +324,61 @@ namespace CKAN
 
             if (remainingIdents.Length == 0)
             {
-                log.DebugFormat("Validating upgradability solution: {0}",
+                log.DebugFormat("Found upgradability solution: {0}",
                                 string.Join(", ", partialSolution.Select(m => m.ToString())));
-                // We are a leaf node, return whatever we received if it is a valid solution
-                if (partialSolution.All(tuple => !tuple.upgradeable)
-                    || Utilities.DefaultIfThrows(() =>
-                           new RelationshipResolver(partialSolution.Where(tuple => tuple.upgradeable)
-                                                                   .Select(tuple => tuple.module),
-                                                    partialSolution.Where(tuple => tuple.upgradeable)
-                                                                   .Select(tuple => tuple.module.identifier)
-                                                                   .Select(querier.GetInstalledVersion)
-                                                                   .OfType<CkanModule>(),
-                                                    RelationshipResolverOptions.DependsOnlyOpts(instance.StabilityToleranceConfig),
-                                                    querier, instance.Game, instance.VersionCriteria()))
-                       is not null)
-                {
-                    yield return partialSolution;
-                }
-                yield break;
+                // We are a leaf node, return whatever we received
+                yield return partialSolution;
             }
-            foreach (var ident in remainingIdents)
+            else
             {
-                var imod = querier.GetInstalledVersion(ident);
-                var otherIdents = remainingIdents.Where(i => i != ident)
-                                                 .ToArray();
-                // Have to check HasUpdate again to account for the additions to partialSolution
-                if (!heldIdents.Contains(ident)
-                    && querier.HasUpdate(ident, instance.StabilityToleranceConfig, instance, filters,
-                                         !ignoreMissingIdents?.Contains(ident) ?? true,
-                                         out CkanModule? latest,
-                                         partialMods))
+                foreach (var ident in remainingIdents)
                 {
-                    // Upgrading this mod is allowed so far, use it to check the remaining mods
+                    var imod = querier.GetInstalledVersion(ident);
+                    var otherIdents = remainingIdents.Where(i => i != ident)
+                                                     .ToArray();
+                    // Have to check HasUpdate again to account for the additions to partialSolution
+                    if (!heldIdents.Contains(ident)
+                        && querier.HasUpdate(ident, instance.StabilityToleranceConfig, instance, filters,
+                                             !ignoreMissingIdents?.Contains(ident) ?? true,
+                                             out CkanModule? latest,
+                                             partialMods))
+                    {
+                        // Upgrading this mod is allowed so far, use it to check the remaining mods
+                        foreach (var solution in querier.FindUpgradeabilitySolutions(
+                                                     instance, otherIdents,
+                                                     partialSolution.Concat(Enumerable.Repeat((upgradeable: true,
+                                                                                               module:      latest),
+                                                                                              1))
+                                                                    .ToArray(),
+                                                     filters, heldIdents, ignoreMissingIdents))
+                        {
+                            yield return solution;
+                        }
+                        if (imod == latest)
+                        {
+                            log.DebugFormat("Update for {0} is a re-install, skipping installed branch",
+                                            imod);
+                            continue;
+                        }
+                    }
+
+                    if (imod is { IsDLC: false} && !imod.DependsAndConflictsOK(partialMods))
+                    {
+                        log.DebugFormat("Installed {0} not compatible with partial solution, rejecting installed branch",
+                                        imod);
+                        continue;
+                    }
+
                     foreach (var solution in querier.FindUpgradeabilitySolutions(
                                                  instance, otherIdents,
-                                                 partialSolution.Concat(Enumerable.Repeat((upgradeable: true,
-                                                                                           module:      latest),
-                                                                                          1))
-                                                                .ToArray(),
+                                                 imod is { IsDLC: false }
+                                                     ? partialSolution.Append((false, imod))
+                                                                      .ToArray()
+                                                     : partialSolution,
                                                  filters, heldIdents, ignoreMissingIdents))
                     {
                         yield return solution;
                     }
-                    if (imod == latest)
-                    {
-                        log.DebugFormat("Update for {0} is a re-install, skipping installed branch",
-                                        imod);
-                        continue;
-                    }
-                }
-
-                if (imod is { IsDLC: false} && !imod.DependsAndConflictsOK(partialMods))
-                {
-                    log.DebugFormat("Installed {0} not compatible with partial solution, rejecting installed branch",
-                                    imod);
-                    continue;
-                }
-
-                foreach (var solution in querier.FindUpgradeabilitySolutions(
-                                             instance, otherIdents,
-                                             imod is { IsDLC: false }
-                                                 ? partialSolution.Append((false, imod))
-                                                                  .ToArray()
-                                                 : partialSolution,
-                                             filters, heldIdents, ignoreMissingIdents))
-                {
-                    yield return solution;
                 }
             }
         }

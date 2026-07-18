@@ -320,7 +320,9 @@ namespace CKAN.GUI
         public IEnumerable<ModChange> GetModChanges(bool upgradeChecked,
                                                     bool replaceChecked,
                                                     bool metadataChanged,
-                                                    bool installedFilesChanged)
+                                                    bool installMetadataChanged,
+                                                    GameInstance instance,
+                                                    HashSet<string> filters)
         {
             var installed = InstalledMod?.Module;
             if (replaceChecked)
@@ -340,7 +342,6 @@ namespace CKAN.GUI
                 {
                     yield return new ModUpgrade(Mod,
                                                 SelectedMod,
-                                                false, false, false,
                                                 ServiceLocator.Container.Resolve<IConfiguration>());
                 }
                 else
@@ -360,10 +361,9 @@ namespace CKAN.GUI
             else if (upgradeChecked && SelectedMod != null)
             {
                 // Reinstall
-                yield return new ModUpgrade(Mod,
-                                            SelectedMod,
-                                            false, metadataChanged, installedFilesChanged,
-                                            ServiceLocator.Container.Resolve<IConfiguration>());
+                yield return new ModReinstall(Mod, false, metadataChanged,
+                                              installMetadataChanged || (!InstalledMod?.AllFilesExist(instance, filters) ?? false),
+                                              ServiceLocator.Container.Resolve<IConfiguration>());
             }
         }
 

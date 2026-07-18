@@ -7,7 +7,6 @@ using System.Linq;
 using System.Windows.Forms;
 
 using Mono.Cecil;
-using Mono.Cecil.Cil;
 using NUnit.Framework;
 
 using CKAN.Extensions;

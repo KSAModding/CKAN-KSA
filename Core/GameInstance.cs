@@ -497,6 +497,7 @@ namespace CKAN
                         {
                             FileName         = binary,
                             Arguments        = string.Join(" ", split.Skip(1)),
+                            UseShellExecute  = true,
                             WorkingDirectory = workingDir
                         },
                         EnableRaisingEvents = true

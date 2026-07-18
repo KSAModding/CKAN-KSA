@@ -475,6 +475,89 @@ namespace Tests.Core.Registry
             }
         }
 
+        [TestCase(new string[] { },
+                  new string[] { },
+                  new string[] { }),
+         TestCase(new string[]
+                  {
+                      @"{
+                          ""identifier"": ""KnownMod1""
+                      }",
+                      @"{
+                          ""identifier"": ""KnownMod2""
+                      }",
+                      @"{
+                          ""identifier"": ""MakingHistory-DLC"",
+                          ""version"":    ""2.0"",
+                          ""kind"":       ""dlc""
+                      }",
+                  },
+                  new string[] { "KnownMod1", "KnownMod2", "UnknownMod1", "UnknownMod2" },
+                  new string[] { "KnownMod1 1.0", "KnownMod2 1.0" }),
+         TestCase(new string[]
+                  {
+                      @"{
+                          ""identifier"": ""Scatterer"",
+                          ""depends"": [
+                              {
+                                  ""name"": ""Scatterer-config""
+                              },
+                              {
+                                  ""name"": ""Scatterer-sunflare""
+                              }
+                          ]
+                      }",
+                      @"{
+                          ""identifier"": ""Scatterer-config""
+                      }",
+                      @"{
+                          ""identifier"": ""Scatterer-config-alternate"",
+                          ""provides"":   [ ""Scatterer-config"" ]
+                      }",
+                      @"{
+                          ""identifier"": ""Scatterer-sunflare""
+                      }",
+                      @"{
+                          ""identifier"": ""Scatterer-sunflare-alternate"",
+                          ""provides"": [ ""Scatterer-sunflare"" ]
+                      }",
+                  },
+                  new string[] { "Scatterer" },
+                  new string[] { "Scatterer 1.0" })
+        ]
+        public void UpgradeableModules_ManuallyInstalled_Upgradeable(
+                string[] availableModules,
+                string[] manuallyInstalledIdents,
+                string[] expectedUpgradeable)
+        {
+            // Arrange
+            var user = new NullUser();
+            using (var gameInstWrapper = new DisposableKSP())
+            using (var repo = new TemporaryRepository(RelationshipResolverTests.MergeWithDefaults(availableModules)
+                                                                               .ToArray()))
+            using (var repoData = new TemporaryRepositoryData(user, repo.repo))
+            {
+                var registry = new CKAN.Registry(repoData.Manager, repo.repo);
+                registry.SetDlcs(new Dictionary<string, UnmanagedModuleVersion>()
+                                 {
+                                     {
+                                         "MakingHistory-DLC",
+                                         new UnmanagedModuleVersion("1.0")
+                                     },
+                                 });
+                registry.SetDlls(manuallyInstalledIdents.ToDictionary(ident => ident,
+                                                                      ident => $"{ident}/{ident}.dll"));
+
+                // Act
+                var upgradeable = registry.UpgradeableModules(gameInstWrapper.KSP,
+                                                              new HashSet<string>());
+
+                // Assert
+                CollectionAssert.AreEquivalent(expectedUpgradeable,
+                                               upgradeable.Select(m => m.ToString()));
+            }
+        }
+
         [Test,
             // Empty registry, return nothing
             TestCase(new string[] { },
