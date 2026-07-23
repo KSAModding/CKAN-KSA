@@ -32,7 +32,7 @@ namespace Tests.GUI
     {
         public ModListTests()
         {
-            this.graphics = Graphics.FromImage(EmbeddedImages.apply);
+            graphics = Graphics.FromImage(EmbeddedImages.apply);
         }
 
         [Test]
@@ -912,7 +912,7 @@ namespace Tests.GUI
             => Enumerable.Range(1, numCheckboxCols)
                          .Select(i => (DataGridViewColumn)new DataGridViewCheckBoxColumn())
                          .Concat(Enumerable.Range(1, numTextCols)
-                         .Select(i => new DataGridViewTextBoxColumn()))
+                                           .Select(i => new DataGridViewTextBoxColumn()))
                          .ToArray();
 
     }

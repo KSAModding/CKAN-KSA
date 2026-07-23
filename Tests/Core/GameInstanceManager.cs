@@ -766,6 +766,39 @@ namespace Tests.Core
         }
 
         [Test]
+        public void AddInstance_PathOverloadMultiGameFolderCancelled_ReturnsNull()
+        {
+            // Arrange: a folder that looks like both a KSP1 and a KSA install, so
+            // DetermineGame has to ask which game it is; cancelling that dialog
+            // must abort the add without registering anything.
+            using (var dirA   = new TemporaryDirectory())
+            using (var config = new FakeConfiguration(new List<Tuple<string, string, string>>(),
+                                                      null, null))
+            {
+                var gameDir = FakeKsaGameDir(dirA);
+                // KSP1 anchor files for every platform plus its GameData marker
+                File.WriteAllText(Path.Combine(gameDir, "KSP_x64.exe"), "");
+                File.WriteAllText(Path.Combine(gameDir, "buildID64.txt"), "");
+                File.WriteAllText(Path.Combine(gameDir, "KSP.x86_64"), "");
+                Directory.CreateDirectory(Path.Combine(gameDir, "GameData"));
+
+                // Cancel the game selection dialog
+                var user = new CapturingUser(false, q => true, (msg, objs) => -1);
+                using (var mgr = new GameInstanceManager(user, config))
+                {
+                    // Act
+                    var result = mgr.AddInstance(gameDir, "which", user);
+
+                    // Assert
+                    Assert.IsNull(result);
+                    Assert.IsFalse(mgr.HasInstance("which"));
+                    Assert.AreEqual(1, user.RaisedSelectionDialogs.Count);
+                    Assert.IsEmpty(user.RaisedErrors);
+                }
+            }
+        }
+
+        [Test]
         public void AddInstance_PathOverloadStateDirNotCreatable_RaisesErrorAndDoesNotRegister()
         {
             // Arrange

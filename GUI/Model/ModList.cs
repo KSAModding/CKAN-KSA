@@ -389,8 +389,14 @@ namespace CKAN.GUI
                                                        DataGridViewColumn? replaceCol)
         {
             log.Debug("Computing user changeset");
+            var instFilters = ServiceLocator.Container
+                                            .Resolve<IConfiguration>()
+                                            .GetGlobalInstallFilters(instance.Game)
+                                            .Concat(instance.InstallFilters)
+                                            .ToHashSet();
             var modChanges = full_list_of_mod_rows.Values
-                                                  .SelectMany(row => rowChanges(registry, row, upgradeCol, replaceCol))
+                                                  .SelectMany(row => rowChanges(registry, row, upgradeCol, replaceCol,
+                                                                                instance, instFilters))
                                                   .ToHashSet();
 
             // Inter-mod dependencies can block some upgrades, which can sometimes but not always
@@ -433,7 +439,9 @@ namespace CKAN.GUI
         private static IEnumerable<ModChange> rowChanges(IRegistryQuerier    registry,
                                                          DataGridViewRow     row,
                                                          DataGridViewColumn? upgradeCol,
-                                                         DataGridViewColumn? replaceCol)
+                                                         DataGridViewColumn? replaceCol,
+                                                         GameInstance        instance,
+                                                         HashSet<string>     filters)
             => row.Tag is GUIMod gmod
                    ? gmod.GetModChanges(upgradeCol?.Visible == true
                                         && row.Cells[upgradeCol.Index] is DataGridViewCheckBoxCell upgradeCell
@@ -442,7 +450,7 @@ namespace CKAN.GUI
                                         && row.Cells[replaceCol.Index] is DataGridViewCheckBoxCell replaceCell
                                         && replaceCell.Value is true,
                                         registry.MetadataChanged(gmod.Identifier, out bool installedFilesChanged),
-                                        installedFilesChanged)
+                                        installedFilesChanged, instance, filters)
                    : Enumerable.Empty<ModChange>();
 
         public static Tuple<ICollection<ModChange>, Dictionary<CkanModule, string>, List<string>> ComputeFullChangeSetFromUserChangeSet(
