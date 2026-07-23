@@ -20,7 +20,7 @@ A collaborative environment is crucial. When something goes wrongâ€”and it willâ
 * <https://github.com/KSP-CKAN/CKAN/issues/new/choose> (for issues related to the client)
 * <https://github.com/KSP-CKAN/NetKAN/issues/new/choose> (for issues related to metadata for KSP1)
 * <https://github.com/KSP-CKAN/KSP2-NetKAN/issues/new/choose> (for issues related to metadata for KSP2)
-* <https://github.com/KSP-CKAN/KSA-NetKAN/issues/new/choose> (for issues related to metadata for KSA)
+* <https://github.com/KSAModding/KSA-NetKAN/issues/new/choose> (for issues related to metadata for KSA)
 
 Pull requests are always welcome.
 
